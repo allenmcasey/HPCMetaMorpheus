@@ -4,6 +4,11 @@ if [ ! -f "elements.dat" ]; then
 fi
 
 echo " "
+echo "  CsmSerializationTest"
+make -s CsmSerializationTest
+./CsmSerializationTest
+
+echo " "
 echo "  BinGenerationTest"
 make -s BinGenerationTest
 ./BinGenerationTest

@@ -1,4 +1,4 @@
-﻿#include "CrosslinkSpectralMatch.h"
+#include "CrosslinkSpectralMatch.h"
 #include "../Ms2ScanWithSpecificMass.h"
 #include "Crosslinker.h"
 
@@ -487,278 +487,284 @@ namespace EngineLayer
             return s;
         }
 
-
-        int CrosslinkSpectralMatch::Pack(char *buf, size_t &buf_len,
-                                         const std::vector<CrosslinkSpectralMatch *> &csmVec)
-        {
-            size_t pos = 0;
-            int ret;
-
-            for ( auto csm: csmVec ) {
-                size_t len = buf_len - pos;
-                ret = CrosslinkSpectralMatch::Pack_internal(buf+pos, len, csm);
-                if ( ret == -1 ) {
-                    buf_len = pos + len;
-                    return ret;
-                }
-                pos += ret;
-                auto betaPeptide = csm->getBetaPeptide();
-                if ( betaPeptide != nullptr ) {
-                    len = buf_len - pos;
-                    ret = CrosslinkSpectralMatch::Pack_internal(buf+pos, len, betaPeptide);
-                    if ( ret == -1 ) {
-                        buf_len = pos + len;
-                        return ret;
-                    }
-                    pos += ret;                    
-                }
-            }
-            buf_len = pos;
-            return pos;
-        }
+        /**==================================================/
+         *                   NEW VERSION                    *
+         * =================================================*/
 
         int CrosslinkSpectralMatch::Pack(char *buf, size_t &buf_len, CrosslinkSpectralMatch *csm)
         {
-            size_t pos = 0;
-            int ret;
-
-            size_t len = buf_len - pos;
-            ret = CrosslinkSpectralMatch::Pack_internal(buf+pos, len, csm);
-            if ( ret == -1 ) {
-                buf_len = pos + len;
-                return ret;
-            }
-            pos += ret;
-            auto betaPeptide = csm->getBetaPeptide();
-            if ( betaPeptide != nullptr ) {
-                len = buf_len - pos;
-                ret = CrosslinkSpectralMatch::Pack_internal(buf+pos, len, betaPeptide);
-                if ( ret == -1 ) {
-                    buf_len = pos + len;
-                    return ret;
-                }
-                pos += ret;                    
-            }
-            buf_len = pos;
+            std::vector<CrosslinkSpectralMatch *> csmVec;
+            csmVec.push_back(csm);
+            int pos = CrosslinkSpectralMatch::Pack(buf, buf_len, csmVec);
+            
             return pos;            
         }
-        
-        int CrosslinkSpectralMatch::Pack_internal(char *buf, size_t &buf_len, CrosslinkSpectralMatch *csm)
-        {
-            size_t bufpos = 0;
 
-            auto mFrIons = csm->getMatchedFragmentIons ();
-            auto dp = csm->digestionParams;
-            auto uMapPep = csm->getPeptidesToMatchingFragments();
+        int CrosslinkSpectralMatch::Pack(char *buf, size_t &buf_len, const std::vector<CrosslinkSpectralMatch *> &csmVec)
+        {
+	    std::cout << "Packing" << std::endl;
+            std::vector<SerializedCrosslinkSpectralMatch> serializedCSMVec;
+
+            for (auto csm : csmVec)
+            {
+                SerializedCrosslinkSpectralMatch serializedCSM = CrosslinkSpectralMatch::Pack_internal(csm);
+                serializedCSMVec.push_back(serializedCSM);
+
+		std::cout << "\tpushed to vector..." << std::endl;
+
+                auto betaPeptide = csm->getBetaPeptide();
+
+		std::cout << "\tChecked for betapep..."  << std::endl;		
+
+                if (betaPeptide != nullptr)
+                {
+		    std::cout << "\t\thas betapep..."  << std::endl;
+                    SerializedCrosslinkSpectralMatch serializedBetaPeptide = CrosslinkSpectralMatch::Pack_internal(betaPeptide);
+                    serializedCSMVec.push_back(serializedBetaPeptide);
+                }
+		std::cout << "\tCSM complete..."  << std::endl;
+            }
+
+	    std::cout << "Finished internal packing, vector size: " << serializedCSMVec.size() << std::endl;
+
+            std::stringstream sstream;
+            msgpack::pack(sstream, serializedCSMVec);
+            std::string tmp = sstream.str();            
+            int bufSize = sizeof(tmp);
+
+	    std::cout << "Size of buffer: " << bufSize << std::endl;
+
+	    memcpy(buf, tmp.c_str(), bufSize);
+	    std::cout << buf << std::endl;
+            return bufSize;
+        }
+
+        SerializedCrosslinkSpectralMatch CrosslinkSpectralMatch::Pack_internal(CrosslinkSpectralMatch *csm)
+        {
+	    std::cout << "Packing internally..." << std::endl;
             std::vector<int> lPositions  = csm->getLinkPositions();
             std::vector<int> xlRanks = csm->getXlRank();
-            bool has_beta_peptide = csm->getBetaPeptide() != nullptr;          
 
-            size_t pos = BinaryPack::LineStartOffset;
-            char tmpbuf[256];
-            int retlen;
-            
-            // line 1
-            retlen = BinaryPack::PackBool(tmpbuf+pos, csm->getNotch().has_value());
-            pos += retlen;
-            if ( csm->getNotch().has_value() ) {
-                retlen = BinaryPack::PackInt(tmpbuf+pos, csm->getNotch().value());
-                pos += retlen;
+	    std::cout << "1"  << std::endl;
+
+            bool hasNotchValue = csm->getNotch().has_value();
+            int notchValue = 0;
+            if (hasNotchValue)
+            {
+                notchValue = csm->getNotch().value();
             }
-            
-            retlen = BinaryPack::PackDouble(tmpbuf+pos, csm->getXLTotalScore() );
-            pos += retlen;
-            retlen = BinaryPack::PackDouble(tmpbuf+pos, csm->getDeltaScore() );
-            pos += retlen;
-            retlen = BinaryPack::PackDouble(tmpbuf+pos, csm->getScore() );
-            pos += retlen;
-            retlen = BinaryPack::PackDouble(tmpbuf+pos, csm->getRunnerUpScore() );
-            pos += retlen;
-            retlen = BinaryPack::PackDouble(tmpbuf+pos, csm->getPeptideMonisotopicMass().value() );
-            pos += retlen;
 
-            retlen = BinaryPack::PackInt(tmpbuf+pos, csm->getScanNumber() );
-            pos += retlen;
-            retlen = BinaryPack::PackInt(tmpbuf+pos, csm->getXlProteinPos() );
-            pos += retlen;
-            retlen = BinaryPack::PackInt(tmpbuf+pos, (int)csm->getMatchedFragmentIons().size() );
-            pos += retlen;
-            retlen = BinaryPack::PackInt(tmpbuf+pos, (int)lPositions.size() );
-            pos += retlen;
-            retlen = BinaryPack::PackInt(tmpbuf+pos, (int)xlRanks.size() );
-            pos += retlen;
-                        
-            retlen = BinaryPack::PackBool(tmpbuf+pos, has_beta_peptide );
-            pos += retlen;
+	    std::cout << "2"  << std::endl;
+
+            double xlTotalScore = csm->getXLTotalScore();
+            double deltaScore = csm->getDeltaScore();
+            double score = csm->getScore();
+            double runnerUpScore = csm->getRunnerUpScore();
+            double peptideMonoisotopicMass = csm->getPeptideMonisotopicMass().value();
+
+	    std::cout << "3"  << std::endl;
+
+            int scanNumber = csm->getScanNumber();
+            int xlProteinPos = csm->getXlProteinPos();
+            int matchedFragmentIonsSize = (int)csm->getMatchedFragmentIons().size();
+            int lPositionsSize = (int)lPositions.size();
+            int xlRanksSize = (int)xlRanks.size();
+
+            bool hasBetaPeptide = csm->getBetaPeptide() != nullptr; 
+
+	    std::cout << "4"  << std::endl;
 
             PsmCrossType ctype = csm->getCrossType();
-            retlen = BinaryPack::PackString(tmpbuf+pos, PsmCrossTypeToString(ctype) );
-            pos += retlen;
+            std::string psmCrossTypeString = PsmCrossTypeToString(ctype);
+            
+	    std::cout << "5"  << std::endl;
 
-            //Information required to replace the Scan datastructure
             auto tvar = csm->getPrecursorScanNumber();
-            retlen = BinaryPack::PackBool ( tmpbuf+pos, tvar.has_value() );
-            pos += retlen;
-            if ( tvar.has_value() ) {
-                retlen = BinaryPack::PackInt ( tmpbuf+pos, tvar.value() );
-                pos += retlen;
+            bool hasPrecursorScanNumber = tvar.has_value();
+            int precursorScanNumber = 0;
+            if (hasPrecursorScanNumber)
+            {
+                precursorScanNumber = tvar.value();
             }
-            retlen = BinaryPack::PackInt(tmpbuf+pos, csm->getScanExperimentalPeaks());
-            pos += retlen;
-            retlen = BinaryPack::PackInt(tmpbuf+pos, csm->getScanPrecursorCharge());
-            pos += retlen;
 
-            retlen = BinaryPack::PackDouble(tmpbuf+pos, csm->getScanRetentionTime());
-            pos += retlen;
-            retlen = BinaryPack::PackDouble(tmpbuf+pos, csm->getTotalIonCurrent());
-            pos += retlen;
-            retlen = BinaryPack::PackDouble(tmpbuf+pos, csm->getScanPrecursorMonoisotopicPeakMz());
-            pos += retlen;
-            retlen += BinaryPack::PackDouble(tmpbuf+pos, csm->getScanPrecursorMass());
-            pos += retlen;
+	    std::cout << "6"  << std::endl;
 
-            retlen += BinaryPack::PackString(tmpbuf+pos, csm->getFullFilePath());
-            pos += retlen;
-                        
-            // set lenght of line right at the beginning.
-            BinaryPack::SetLineLength(tmpbuf, pos);
+            int scanExperimentalPeaks = csm->getScanExperimentalPeaks();
+            int scanPrecursorCharge = csm->getScanPrecursorCharge();
 
-            if ( bufpos+pos > buf_len ) {
-                buf_len = bufpos+pos;
-                return -1;
-            }
-            memcpy ( buf+bufpos, tmpbuf, pos );
-            bufpos += pos;
+	    std::cout << "7"  << std::endl;
 
-            //Line 2: pack FdrInfo 
+            double scanRetentionTime = csm->getScanRetentionTime();
+            double totalIonCurrent = csm->getScanRetentionTime();
+            double scanPrecursorMonoisotopicPeakMz = csm->getScanPrecursorMonoisotopicPeakMz();
+            double scanPrecursorMass = csm->getScanPrecursorMass();
+
+            std::string fullFilePath = csm->getFullFilePath();
+
+	    std::cout << "8"  << std::endl;
+
             FdrInfo *fdr = csm->getFdrInfo();
-            size_t tmp_len = buf_len - bufpos;
+	    std::cout << "Got fdr new"  << std::endl;
 
-            // this routine sets all the required aspects of a packed line (e.g. header, length)
-            int ret = FdrInfo::Pack(buf+bufpos, tmp_len, fdr );
-            if ( ret == -1 ) {
-                buf_len += tmp_len - (buf_len - bufpos);
-                return -1;
+            bool has_fdr = (fdr != nullptr);
+
+	    std::cout << has_fdr  << std::endl;
+
+	    std::cout << "sumpin" << std::endl;
+
+	    SerializedFdrInfo sFdr;	
+	    if (has_fdr)
+            {
+
+		std::cout << "serializaing fdr..." << std::endl;
+	
+                sFdr = {
+                    fdr->getCumulativeTarget(),
+                    fdr->getCumulativeDecoy(),
+                    fdr->getQValue(),
+                    fdr->getCumulativeTargetNotch(),
+                    fdr->getCumulativeDecoyNotch(),
+                    fdr->getQValueNotch(),
+                    fdr->getMaximumLikelihood(),
+                    fdr->getEValue(),
+                    fdr->getEScore(),
+                    fdr->getCalculateEValue(),
+                    has_fdr,
+                };
             }
-            bufpos += tmp_len;
+            else
+            {
+		std::cout << "not serializaing fdr because it doesn't exist..." << std::endl;
 
-            //line 3: LinkPositions
-            pos = BinaryPack::LineStartOffset;
-            memset(tmpbuf, 0, 256);
+                sFdr = {
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, false,
+                };
+            }		
 
-            for ( auto lp: lPositions ) {
-                //output << lp << "\t";
-                retlen = BinaryPack::PackInt(tmpbuf+pos, lp );
-                pos += retlen;
-            }
-            // set lenght of line right at the beginning.
-            BinaryPack::SetLineLength(tmpbuf, pos);
+ 	    std::cout << "Done serializing fdr"  << std::endl;
 
-            if ( bufpos+pos > buf_len ) {
-                buf_len = bufpos+pos;
-                return -1;
-            }
-            memcpy ( buf+bufpos, tmpbuf, pos );
-            bufpos += pos;
-            
-            //line 4: xlRank
-            pos = BinaryPack::LineStartOffset;
-            memset(tmpbuf, 0, 256);
+            auto dp = csm->digestionParams;
+            std::string digestionParamsString = dp->ToString();
 
-            for ( auto xl: xlRanks) {
-                //output << xl << "\t";
-                retlen = BinaryPack::PackInt(tmpbuf+pos, xl );
-                pos += retlen;
-            }
-
-            // set lenght of line right at the beginning.
-            BinaryPack::SetLineLength(tmpbuf, pos);
-
-            if ( bufpos+pos > buf_len ) {
-                buf_len = bufpos+pos;
-                return -1;
-            }
-            memcpy ( buf+bufpos, tmpbuf, pos );
-            bufpos += pos;
-            
-            //line 5: DigestionParams();
-            pos = BinaryPack::LineStartOffset;
-            memset(tmpbuf, 0, 256);
-            
-            std::string s = dp->ToString();
-            retlen = BinaryPack::PackString(tmpbuf+pos, s);
-            pos += retlen;
-
-            // set lenght of line right at the beginning.
-            BinaryPack::SetLineLength(tmpbuf, pos);
-
-            if ( bufpos+pos > buf_len ) {
-                buf_len = bufpos+pos;
-                return -1;
-            }
-            memcpy ( buf+bufpos, tmpbuf, pos );
-            bufpos += pos;
-                        
-            //line 6-10: PeptideWithSetModifications;
-            //Assuming right now only a single PeptideWithSetModifications
+            auto uMapPep = csm->getPeptidesToMatchingFragments(); 
             if ( uMapPep.size() != 1 ) {
                 std::cout << "CrosslinkSpectralMatch::Pack: Error - unordered_map has more than one entry!\n";
             }
             auto pep = std::get<0>(*uMapPep.begin());
-            tmp_len = buf_len - bufpos;
 
-            // this routine sets all the required aspects of a packed line (e.g. header, length)
-            ret = PeptideWithSetModifications::Pack(buf+bufpos, tmp_len, pep );
-            if ( ret == -1 ) {
-                buf_len += tmp_len - (buf_len - bufpos);
-                return -1;
-            }
-            bufpos += tmp_len;
-            
-            //line 11-x: one line for each MatchedFragmentIon
-            for ( auto i=0; i< mFrIons.size(); i++ ) {
-                tmp_len = buf_len - bufpos;
+            SerializedPeptide sPep = {
+                pep->getOneBasedStartResidueInProtein(),
+                pep->getOneBasedEndResidueInProtein(),
+                pep->getMissedCleavages(),
+                pep->NumFixedMods,
+                pep->getPeptideDescription(),
+                CleavageSpecificityExtension::GetCleavageSpecificityAsString(pep->getCleavageSpecificityForFdrCategory()),
+                pep->getFullSequence(),
+                pep->getDigestionParamString(),
+            };
 
-                // dito here, header and length should be set
-                ret = MatchedFragmentIon::Pack ( buf+bufpos, tmp_len, mFrIons[i]);
-                if ( ret == -1 ) {
-                    buf_len += tmp_len - (buf_len - bufpos);
-                    return -1;
-                }
-                bufpos += tmp_len;
+	    std::cout << "Done serilizaing SPep"  << std::endl;
+
+            std::string accession = pep->getProteinAccession();
+            if ( accession != "" )  {
+                sPep.GetProteinAccession = accession;                                     
             }
-            
-            return (int)bufpos;
+            else  {
+                sPep.GetProteinAccession = "-";
+            }
+
+            std::vector<SerializedMatchedFragmentIon> matchedFragmentIons;
+            auto mFrIons = csm->getMatchedFragmentIons();
+            for (auto ion : mFrIons) 
+            {
+		auto product = ion->NeutralTheoreticalProduct;
+                auto tfragment = product->TerminusFragment;
+	        auto ptype = product->productType;
+
+                SerializedMatchedFragmentIon sIon = {
+                    ion->Mz,
+                    ion->Intensity,
+                    ion->Charge,
+                    product->NeutralLoss,
+                    Fragmentation::ProductTypeToString(ptype),
+                    Fragmentation::FragmentationTerminusToString(tfragment->Terminus),
+                    tfragment->NeutralMass,
+                    tfragment->FragmentNumber,
+                    tfragment->AminoAcidPosition,
+                };
+
+                matchedFragmentIons.push_back(sIon);
+            }
+
+	    std::cout << "Done serializing MFR"  << std::endl;
+
+            SerializedCrosslinkSpectralMatch serializedCSM = {
+                hasNotchValue, 
+                notchValue, 
+                xlTotalScore, 
+                deltaScore, 
+                score, 
+                runnerUpScore,
+                peptideMonoisotopicMass, 
+                scanNumber, 
+                xlProteinPos, 
+                matchedFragmentIonsSize,
+                lPositionsSize, 
+                xlRanksSize, 
+                hasBetaPeptide, 
+                psmCrossTypeString, 
+                hasPrecursorScanNumber,
+                precursorScanNumber, 
+                scanExperimentalPeaks, 
+                scanPrecursorCharge, 
+                scanRetentionTime,
+                totalIonCurrent, 
+                scanPrecursorMonoisotopicPeakMz, 
+                scanPrecursorMass, 
+                fullFilePath,
+                sFdr, 
+                lPositions, 
+                xlRanks, 
+                digestionParamsString, 
+                sPep, 
+                matchedFragmentIons,
+            };
+
+	    std::cout << "Done internally"  << std::endl;
+
+            return serializedCSM;
         }
 
         void CrosslinkSpectralMatch::Unpack (char *buf, size_t buf_len, int count, size_t &len,
                                              std::vector<CrosslinkSpectralMatch*> &pepVec,
                                              const std::vector<Modification*> &mods,
-                                             const std::vector<Protein *> &proteinList )
+                                             const std::vector<Protein *> &proteinList)
         {
-            std::vector<char *> lines = BinaryPack::SplitLines(buf, buf_len);
+            std::stringstream sstream;
+            sstream << buf;
+	    std::cout << "sstream size before unpacking: " << sstream.str().size() << std::endl;
 
-            size_t total_len=0;
-            int counter=0;
-            for (auto  i=0; i < lines.size();  ) {
-                size_t tmp_len=0;
+            msgpack::object_handle objHandle = msgpack::unpack(sstream.str().data(), sstream.str().size());
+            msgpack::object const& obj = objHandle.get();
+            auto serializedCSMVec = obj.as< std::vector<SerializedCrosslinkSpectralMatch> >();
+
+            int index = 0;
+            while (index < serializedCSMVec.size())
+            {
                 CrosslinkSpectralMatch *pep;
-                bool has_beta_peptide=false;
-                CrosslinkSpectralMatch::Unpack_internal(lines, i, tmp_len, &pep, mods, proteinList,
-                                                        has_beta_peptide );
-                total_len += tmp_len;
+                bool has_beta_peptide = false;
+
+                CrosslinkSpectralMatch::Unpack_internal (serializedCSMVec[index++], &pep, mods, proteinList, has_beta_peptide);
                 pepVec.push_back(pep);
+
                 if ( has_beta_peptide ) {
                     CrosslinkSpectralMatch *beta_pep;
-                    CrosslinkSpectralMatch::Unpack_internal(lines, i, tmp_len, &beta_pep, mods, proteinList,
-                                                            has_beta_peptide );
+		    has_beta_peptide = false;
+                    CrosslinkSpectralMatch::Unpack_internal(serializedCSMVec[index++], &beta_pep, mods, proteinList, has_beta_peptide);
                     pep->setBetaPeptide(beta_pep);
-                    total_len += tmp_len;
                 }
-                counter ++;
-                if ( counter == count ) break;
             }
-            len = total_len;
         }
 
         void CrosslinkSpectralMatch::Unpack (char *buf, size_t buf_len, size_t &len,
@@ -766,182 +772,126 @@ namespace EngineLayer
                                              const std::vector<Modification*> &mods,
                                              const std::vector<Protein *> &proteinList )
         {
-            std::vector<char *> lines = BinaryPack::SplitLines(buf, buf_len);
-            int index=0;
-            if ( lines.size() < 10 ) {
-                std::cout << "CrosslinkSpectralMatch::Unpack : input does not contain enough information to " <<
-                    "reconstruct the CrosslinkSpectralMatch. " << std::endl;
-                return;
-            }
+            std::stringstream sstream;
+            sstream << buf;
+
+            msgpack::object_handle objHandle = msgpack::unpack(sstream.str().data(), sstream.str().size());
+            msgpack::object const& obj = objHandle.get();
+            auto serializedCSMVec = obj.as< std::vector<SerializedCrosslinkSpectralMatch> >();
+
             bool has_beta_peptide=false;            
-            CrosslinkSpectralMatch::Unpack_internal ( lines, index, len, newCsm, mods, proteinList,
-                                                      has_beta_peptide );
-            if ( has_beta_peptide) {
+            CrosslinkSpectralMatch::Unpack_internal (serializedCSMVec[0], newCsm, mods, proteinList, has_beta_peptide);
+            if ( has_beta_peptide) 
+            {
                 CrosslinkSpectralMatch* beta_pep;
-                size_t tmp_len=0;
-                CrosslinkSpectralMatch::Unpack_internal ( lines, index, tmp_len, &beta_pep, mods, proteinList,
-                                                          has_beta_peptide );
+
+                CrosslinkSpectralMatch::Unpack_internal (serializedCSMVec[1], &beta_pep, mods, proteinList, has_beta_peptide);
                 (*newCsm)->setBetaPeptide(beta_pep);
-                len += tmp_len;
             }            
         }
 
-        void CrosslinkSpectralMatch::Unpack_internal (std::vector<char*> &input,
-                                                      int &index, size_t &len,
-                                                      CrosslinkSpectralMatch** newCsm,
-                                                      const std::vector<Modification*> &mods,
-                                                      const std::vector<Protein *> &proteinList,
-                                                      bool &has_beta_peptide )
-        {
-            size_t total_len = 0;
-            int linelen=0;
-            int retlen, pos=0;
-            char *buf=NULL;
-            //Dissect line 1: generic information
-            buf = input[index];
-            retlen = BinaryPack::GetLineLength( buf, linelen);
-            pos += retlen;
-            total_len += linelen; 
-            index++;
-            
-            int notch=-1, scannumber, proteinPos, matchedFragmentIonsVecsize, lpositionsize, xlranksize;
-            double  deltaScore, XLTotalScore, score, runnerUpScore, peptideMonisotopicMass;
+        void CrosslinkSpectralMatch::Unpack_internal (SerializedCrosslinkSpectralMatch sCSM, CrosslinkSpectralMatch **newCSM,
+                                                    const std::vector<Modification*> &mods, const std::vector<Protein *> &proteinList,
+                                                    bool &has_beta_peptide )
+        { 
+	    int notch = -1, scannumber, proteinPos, matchedFragmentIonsVecsize, lpositionsize, xlranksize;
+            double  deltaScore, XLTotalScore, score, runnerUpScore, peptideMonisotopicMass = 0;
             bool  tmpvar;
             
-            retlen = BinaryPack::UnpackBool ( buf+pos, tmpvar );
-            pos += retlen;
-            if ( tmpvar ) {
-                retlen = BinaryPack::UnpackInt(buf+pos, notch );
-                pos += retlen;
-            }
-            retlen = BinaryPack::UnpackDouble ( buf+pos, XLTotalScore );
-            pos += retlen;
-            retlen = BinaryPack::UnpackDouble ( buf+pos, deltaScore );
-            pos += retlen;
-            retlen = BinaryPack::UnpackDouble ( buf+pos, score );
-            pos += retlen;
-            retlen = BinaryPack::UnpackDouble ( buf+pos, runnerUpScore );
-            pos += retlen;
-            retlen = BinaryPack::UnpackDouble ( buf+pos, peptideMonisotopicMass );
-            pos += retlen;
-
-            retlen = BinaryPack::UnpackInt ( buf+pos, scannumber );
-            pos += retlen;
-            retlen = BinaryPack::UnpackInt ( buf+pos, proteinPos );
-            pos += retlen;
-            retlen = BinaryPack::UnpackInt ( buf+pos, matchedFragmentIonsVecsize );
-            pos += retlen;
-            retlen = BinaryPack::UnpackInt ( buf+pos, lpositionsize );
-            pos += retlen;
-            retlen = BinaryPack::UnpackInt ( buf+pos, xlranksize );
-            pos += retlen;
-
-            retlen = BinaryPack::UnpackBool ( buf+pos, has_beta_peptide );
-            pos += retlen;
-
-            std::string tmpstring;
-            retlen = BinaryPack::UnpackString ( buf+pos, tmpstring );
-            pos += retlen;
-            PsmCrossType ctype = PsmCrossTypeFromString(tmpstring);
-
-
-            //Information required to replace the Scan datastructure
-            bool has_tvar;
-            int  itvar;
-            std::optional<int> scanPrecursorScanNumber;
-            retlen = BinaryPack::UnpackBool ( buf+pos, has_tvar );
-            pos += retlen;
-            if ( has_tvar ) {
-                retlen = BinaryPack::UnpackInt ( buf+pos, itvar );
-                pos += retlen;
-                scanPrecursorScanNumber = std::make_optional (itvar);
+            if ( sCSM.hasNotchValue) {
+                notch = sCSM.notchValue;
             }
 
-            int scanExperimentalPeaks, scanPrecursorCharge;
-            retlen = BinaryPack::UnpackInt(buf+pos, scanExperimentalPeaks);
-            pos += retlen;
-            retlen = BinaryPack::UnpackInt(buf+pos, scanPrecursorCharge);
-            pos += retlen;
+            XLTotalScore = sCSM.xlTotalScore;
+            deltaScore = sCSM.deltaScore;
+            score = sCSM.score;
+            runnerUpScore = sCSM.runnerUpScore;
+            peptideMonisotopicMass = sCSM.peptideMonoisotopicMass;
 
-            double scanRetentionTime, scanTotalIonCurrent, scanPrecursorMonoisotopicPeakMz, scanPrecursorMass;
-            retlen = BinaryPack::UnpackDouble(buf+pos, scanRetentionTime);
-            pos += retlen;
-            retlen = BinaryPack::UnpackDouble(buf+pos, scanTotalIonCurrent);
-            pos += retlen;
-            retlen = BinaryPack::UnpackDouble(buf+pos, scanPrecursorMonoisotopicPeakMz);
-            pos += retlen;
-            retlen += BinaryPack::UnpackDouble(buf+pos, scanPrecursorMass);
-            pos += retlen;
+            scannumber = sCSM.scanNumber;
+            proteinPos = sCSM.xlProteinPos;
+            matchedFragmentIonsVecsize = sCSM.matchedFragmentIonsSize;
+            lpositionsize = sCSM.lPositionsSize;
+            xlranksize = sCSM.xlRanksSize;
 
-            std::string scanFullFilePath;
-            retlen += BinaryPack::UnpackString(buf+pos, scanFullFilePath);
-            pos += retlen;
+            has_beta_peptide = sCSM.hasBetaPeptide;
 
+            PsmCrossType ctype = PsmCrossTypeFromString(sCSM.psmCrossTypeToString);
+            
+            bool has_tvar = sCSM.hasPrecursorScanNumber;
+            int scanPrecursorScanNumber = -1;
+            if (has_tvar)
+            {
+                scanPrecursorScanNumber = sCSM.precursorScanNumber;
+            }
+
+            int scanExperimentalPeaks = sCSM.scanExperimentalPeaks;
+            int scanPrecursorCharge = sCSM.scanPrecursorCharge;
+
+            double scanRetentionTime = sCSM.scanRetentionTime;
+            double scanTotalIonCurrent = sCSM.totalIonCurrent;
+            double scanPrecursorMonoisotopicPeakMz = sCSM.scanPrecursorMonoisotopicPeakMz;
+            double scanPrecursorMass = sCSM.scanPrecursorMass;
+
+            std::string scanFullFilePath = sCSM.fullFilePath;
             
             //line 2: FdrInfo related data
-            FdrInfo* fdr=nullptr;
-            size_t tmp_len=0;
-            FdrInfo::Unpack(input[index], tmp_len, &fdr);
-            total_len += tmp_len;
-            index ++;
+            FdrInfo* fdr = nullptr;
+            FdrInfo* tempFdr = new FdrInfo();
+		
+	    SerializedFdrInfo sFdrInfo = sCSM.fdrInfo;
+            tempFdr->setCumulativeTarget(sFdrInfo.cumulativeTarget);
+            tempFdr->setCumulativeDecoy(sFdrInfo.cumulativeDecoy);
+            tempFdr->setQValue(sFdrInfo.qValue);
+            tempFdr->setCumulativeTargetNotch(sFdrInfo.cumulativeTargetNotch);
+            tempFdr->setCumulativeDecoyNotch(sFdrInfo.cumulativeDecoyNotch);
+            tempFdr->setQValueNotch(sFdrInfo.qValueNotch);
+            tempFdr->setMaximumLikelihood(sFdrInfo.maximumLikelihood);
+            tempFdr->setEScore(sFdrInfo.eScore);
+            tempFdr->setEValue(sFdrInfo.eValue);
+            tempFdr->setCalculateEValue(sFdrInfo.calculateEValue);
 
-            //line 3: linkPositions
-            pos = 0;
-            buf = input[index];
-            index++;
-            retlen = BinaryPack::GetLineLength(buf, linelen);
-            pos += retlen;
-            total_len += linelen;            
+            fdr = tempFdr;
 
-            std::vector<int> linkPosvec;
-            for ( auto i=0; i<lpositionsize; i++ ) {
-                int tmpint;
-                retlen = BinaryPack::UnpackInt ( buf+pos, tmpint );
-                pos += retlen;
-                linkPosvec.push_back(tmpint);
-            }
+            //line 3: linkPositions          
+            std::vector<int> linkPosvec = sCSM.lPositions;
             
             //line 4: xlRank
-            pos = 0;
-            buf = input[index];
-            index++;
-            retlen = BinaryPack::GetLineLength(buf, linelen);
-            pos += retlen;
-            total_len += linelen;            
-
-            std::vector<int> xlRankVec;
-            for ( auto i=0; i<xlranksize; i++ ) {
-                int tmpint;
-                retlen = BinaryPack::UnpackInt ( buf+pos, tmpint );
-                pos += retlen;
-                xlRankVec.push_back(tmpint);
-            }
+            std::vector<int> xlRankVec = sCSM.xlRanks;
             
             //line 5: DigestionParams
-            pos = 0;
-            buf = input[index];
-            index++;
-            retlen = BinaryPack::GetLineLength(buf, linelen);
-            pos += retlen;
-            total_len += linelen;            
-
-            std::string dpstring;
-            retlen = BinaryPack::UnpackString(buf+pos, dpstring);
-            pos += retlen;
+            std::string dpstring = sCSM.digestionParamsString;
             DigestionParams *dp = DigestionParams::FromString(dpstring);
 
-            //line 6-10: PeptideWithSetModifications
-            PeptideWithSetModifications* pep;
-            tmp_len=0;
-            PeptideWithSetModifications::Unpack(input, index, tmp_len, &pep);
-            pep->SetNonSerializedPeptideInfo ( mods, proteinList );
-            total_len += tmp_len;
-            index += 4;
+            /*******************************************************
+             * Everything up to this point is good to go it seems...
+             * proceed to checking out the PepWithSetMods & MFI
+            */
+		
+	    SerializedPeptide sPep = sCSM.peptide;
+
+            //line 6-10: PeptideWithSetModification
+            CleavageSpecificity cvs = CleavageSpecificityExtension::ParseString(sPep.GetCleavageSpecificityAsString);
+
+            std::unordered_map<std::string, Modification*> umsM;
+            auto pep = new PeptideWithSetModifications(sPep.GetFullSequence, 
+                                                          umsM,                
+                                                          sPep.NumFixedMods,
+                                                          dp,                  
+                                                          nullptr,  
+                                                          sPep.GetOneBasedStartResidueInProtein,
+                                                          sPep.GetOneBasedEndResidueInProtein,
+                                                          sPep.GetMissedCleavages,
+                                                          cvs,
+                                                          sPep.GetPeptideDescription);
+            pep->SetNonSerializedPeptideInfo(mods, proteinList);	
+	
+            // protein accession?
 
 #ifdef DEBUG
             // Safety check:
             double monIsotopicMass = pep->getMonoisotopicMass();
-            if ( monIsotopicMass != peptideMonisotopicMass ) {
+            if (monIsotopicMass != peptideMonisotopicMass) {
                 std::cout << "Safety check failed when reconstructing PeptideWithSetMOdifications in CrosslinkSpectralMatch::Unpack(). " <<
                     "monIsotopicMass is " << monIsotopicMass << " should be " << peptideMonisotopicMass << std::endl;
             }
@@ -949,27 +899,48 @@ namespace EngineLayer
             
             // line 11-x: Vector of MatchedFragmentIons
             std::vector<MatchedFragmentIon*> matchedFragmentIonsVec;
-            for ( auto i=0; i< matchedFragmentIonsVecsize; i++ ) {
-                MatchedFragmentIon *ion;
-                tmp_len=0;
-                MatchedFragmentIon::Unpack(input[index], tmp_len, &ion);
-                matchedFragmentIonsVec.push_back(ion);
-                index++;
-                total_len += tmp_len;                    
+            std::vector<SerializedMatchedFragmentIon> serializedMatchedFragmentIons = sCSM.matchedFragmentIons;
+
+            for (auto i = 0; i < matchedFragmentIonsVecsize; i++) {
+
+                SerializedMatchedFragmentIon sMaFObject = serializedMatchedFragmentIons[i];
+
+                // get Ion params
+                double mz = sMaFObject.mz;
+                double intensity = sMaFObject.intensity;
+                int charge = sMaFObject.charge;
+
+                // get Product params
+                double neutralLoss = sMaFObject.neutralLoss;
+                auto pType = Fragmentation::ProductTypeFromString(sMaFObject.productType);
+
+                // get NeutralTerminusFragment params
+                double neutralMass = sMaFObject.neutralMass;
+                auto fragmentationTerminus = Fragmentation::FragmentationTerminusFromString(sMaFObject.fragmentationTerminus);
+                int fragmentNumber = sMaFObject.fragmentNumber;
+                int aminoAcidPosition = sMaFObject.aminoAcidPosition;
+
+                // create MatchedFragmentIon
+                auto terminusFragment = new NeutralTerminusFragment(fragmentationTerminus, neutralMass, fragmentNumber, aminoAcidPosition);
+                auto product = new Product(pType, terminusFragment, neutralLoss);
+                auto newMaF = new MatchedFragmentIon(product, mz, intensity, charge);
+
+                // add Ion to result vector
+                matchedFragmentIonsVec.push_back(newMaF);
             }
 
             
             // We are trearint scannumber and scanindex as the same here. First, it is actually really the same
             // in many scenarios. Second, scanindex is not really used for the subsequent operations as far
             // as I can see right now.
-            CrosslinkSpectralMatch *csm = new CrosslinkSpectralMatch ( pep, notch, XLTotalScore, scannumber,
-                                                                       scanFullFilePath, scannumber,
-                                                                       scanPrecursorScanNumber,
-                                                                       scanRetentionTime, scanExperimentalPeaks,
-                                                                       scanTotalIonCurrent, scanPrecursorCharge,
-                                                                       scanPrecursorMonoisotopicPeakMz,
-                                                                       scanPrecursorMass, dp,
-                                                                       matchedFragmentIonsVec );
+            CrosslinkSpectralMatch *csm = new CrosslinkSpectralMatch (pep, notch, XLTotalScore, scannumber,
+                                                                        scanFullFilePath, scannumber,
+                                                                        scanPrecursorScanNumber,
+                                                                        scanRetentionTime, scanExperimentalPeaks,
+                                                                        scanTotalIonCurrent, scanPrecursorCharge,
+                                                                        scanPrecursorMonoisotopicPeakMz,
+                                                                        scanPrecursorMass, dp,
+                                                                        matchedFragmentIonsVec);
             csm->setXLTotalScore(XLTotalScore);
             csm->setDeltaScore(deltaScore);
             csm->setXlProteinPos(proteinPos);
@@ -978,7 +949,8 @@ namespace EngineLayer
             csm->setCrossType (ctype);
             csm->setXlRank(xlRankVec);
             csm->setLinkPositions(linkPosvec);
-            if ( fdr != nullptr ) {
+            if (fdr != nullptr) 
+            {
                 csm->setFdrInfo(fdr);
             }
             csm->ResolveAllAmbiguities();
@@ -986,14 +958,12 @@ namespace EngineLayer
             // This is a hack. Need to find a proper solution.
             // In some situations involving Mods, the PeptideMonoisotopicMass
             // is not correct after deserialization.
-            csm->setPeptideMonisotopicMass(std::make_optional(peptideMonisotopicMass));
+            csm->setPeptideMonisotopicMass(peptideMonisotopicMass);
 
-            
-            *newCsm = csm;
-            len = total_len;
+            *newCSM = csm;
+
             return ;
         }
-        
+
     }
 }
-

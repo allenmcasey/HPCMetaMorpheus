@@ -19,6 +19,58 @@ namespace EngineLayer
 {
     namespace CrosslinkSearch
     {
+	struct SerializedCrosslinkSpectralMatch {
+
+            bool hasNotchValue;
+            int notchValue;
+
+            double xlTotalScore;
+            double deltaScore;
+            double score;
+            double runnerUpScore;
+            double peptideMonoisotopicMass;
+
+            int scanNumber;
+            int xlProteinPos;
+            int matchedFragmentIonsSize;
+            int lPositionsSize;
+            int xlRanksSize;
+
+            bool hasBetaPeptide;
+
+            std::string psmCrossTypeToString;
+
+            bool hasPrecursorScanNumber;
+            int precursorScanNumber;
+
+            int scanExperimentalPeaks;
+            int scanPrecursorCharge;
+
+            double scanRetentionTime;
+            double totalIonCurrent;
+            double scanPrecursorMonoisotopicPeakMz;
+            double scanPrecursorMass;
+
+            std::string fullFilePath;
+
+            SerializedFdrInfo fdrInfo;
+
+            std::vector<int> lPositions;
+            std::vector<int> xlRanks;
+
+            std::string digestionParamsString;
+
+            SerializedPeptide peptide;
+            std::vector<SerializedMatchedFragmentIon> matchedFragmentIons;
+
+            MSGPACK_DEFINE(hasNotchValue, notchValue, xlTotalScore, deltaScore, score, runnerUpScore,
+                            peptideMonoisotopicMass, scanNumber, xlProteinPos, matchedFragmentIonsSize,
+                            lPositionsSize, xlRanksSize, hasBetaPeptide, psmCrossTypeToString, hasPrecursorScanNumber, 
+                            precursorScanNumber, scanExperimentalPeaks, scanPrecursorCharge, scanRetentionTime, 
+                            totalIonCurrent, scanPrecursorMonoisotopicPeakMz, scanPrecursorMass, fullFilePath,
+                            fdrInfo, lPositions, xlRanks, digestionParamsString, peptide, matchedFragmentIons);
+        };
+
         class CrosslinkSpectralMatch : public PeptideSpectralMatch
         {
         private:
@@ -107,7 +159,7 @@ namespace EngineLayer
             static int Pack ( char *buf, size_t &buf_size, CrosslinkSpectralMatch *csm);
             static int Pack ( char *buf, size_t &buf_size, const std::vector<CrosslinkSpectralMatch *> &csmVec);
 
-            static int Pack_internal ( char *buf, size_t &buf_size, CrosslinkSpectralMatch *csm);
+            static SerializedCrosslinkSpectralMatch Pack_internal(CrosslinkSpectralMatch *csm);
 
             
             
@@ -134,11 +186,9 @@ namespace EngineLayer
                                  const std::vector<Modification*> &mods,
                                  const std::vector<Protein *> &proteinList );
 
-            static void Unpack_internal ( std::vector<char *> &input, int &index, size_t &len,
-                                          CrosslinkSpectralMatch** newCsm,
-                                          const std::vector<Modification*> &mods,
-                                          const std::vector<Protein* > &proteinList,
-                                          bool &has_beta_peptide);
+	    static void Unpack_internal (SerializedCrosslinkSpectralMatch sCSM, CrosslinkSpectralMatch **csm,
+                                    const std::vector<Modification*> &mods, const std::vector<Protein *> &proteinList,
+                                    bool &has_beta_peptide);
             
         };
     }

@@ -1,11 +1,23 @@
 ﻿#pragma once
 
 #include <string>
+#include <msgpack.hpp>
 
 namespace EngineLayer
 {
     namespace FdrAnalysis
     {
+	struct SerializedFdrInfo {
+
+            double cumulativeTarget, cumulativeDecoy, qValue, cumulativeTargetNotch;
+            double cumulativeDecoyNotch, qValueNotch, maximumLikelihood, eValue, eScore;
+            bool calculateEValue, has_fdr;
+
+            MSGPACK_DEFINE(cumulativeTarget, cumulativeDecoy, qValue, cumulativeTargetNotch,
+                            cumulativeDecoyNotch, qValueNotch, maximumLikelihood, eValue, eScore,
+                            calculateEValue, has_fdr);
+        };
+
         class FdrInfo
         {
         private:
@@ -58,7 +70,7 @@ namespace EngineLayer
             ///        of bytes in this case
             ///   >0 : packing successful, number of bytes used up.
             /// </summary>
-            static int Pack( char* buf, size_t &buf_size, FdrInfo *fdr); 
+            static const char* Pack(FdrInfo *fdr); 
 
             /// <summary>
             /// Functionality used to reconstruct an FdrInfo based on a
@@ -71,7 +83,7 @@ namespace EngineLayer
             /// newFdr:   OUT new FdrInfo(s). Can be nullptr.
             ///
             /// </summary>
-            static void Unpack( char* buf, size_t &len, FdrInfo **newfdr );
+            static void Unpack(char* buf, FdrInfo **newfdr);
         };
     }
 }

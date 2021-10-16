@@ -88,7 +88,7 @@ int main ( int argc, char **argv )
     //Chemistry::PeriodicTable::Load (elr);
     UsefulProteomicsDatabases::PeriodicTableLoader::Load (elr);
 
-    std::cout << ++i << ". CSMSerialization_BSA_DSSO" << std::endl;
+    std::cout << ++i << ". CSMSerialization_BSA_DSSO 15" << std::endl;
     Test::CSMSerializationTest::CSMSerializationTest_BSA_DSSO();
 
     std::cout << ++i << ". TestDeadendTrisSerialized" << std::endl;
@@ -203,15 +203,22 @@ namespace Test
 
         std::filesystem::rename("pep.XML.pep.XM", "pep.orig.xml");
         
+	std::cout << "CSM vector size: " << newPsms.size()  << std::endl;
+	std::cout << "Got to packing..." << std::endl;
+
         size_t bufsize= 1024*1024;
         char *sbuf  = new char[bufsize];
         int ret = CrosslinkSpectralMatch::Pack(sbuf, bufsize, newPsms);
         
+	std::cout << "Done packing..." << std::endl;
+
         std::ofstream output("CsmOrig.out");
         for ( auto psms : newPsms ) {
             output << psms->ToString() << std::endl;
         }
         output.close();
+
+	std::cout << "Got to unpacking..." << std::endl;
 
         if ( ret > 0 ) {
             std::vector<CrosslinkSpectralMatch*> unpackedPsms;
@@ -233,6 +240,8 @@ namespace Test
             Assert::IsTrue(CompareFiles("pep.XML.pep.XM", "pep.orig.xml"));
             Assert::IsTrue(CompareFiles("CsmOrig.out", "CsmSerialized.out"));
         }
+
+	std::cout << "Done unpacking..." << std::endl;
 
         delete[] sbuf;
         std::filesystem::remove("CsmOrig.out");

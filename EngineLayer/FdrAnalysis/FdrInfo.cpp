@@ -1,6 +1,7 @@
 ﻿#include "FdrInfo.h"
 
 #include <string.h>
+#include <sstream>
 #include "BinaryPack.h"
 
 namespace EngineLayer
@@ -108,109 +109,70 @@ namespace EngineLayer
                 privateEScore = value;
             }
             
-            int FdrInfo::Pack( char* buf, size_t &buf_len, FdrInfo *fdr)
+            const char* FdrInfo::Pack(FdrInfo *fdr)
             {
-                char tmpbuf[128];
-                size_t pos = BinaryPack::LineStartOffset;
-                int retlen;
-                memset(tmpbuf, 0, 128);
-                
-                retlen = BinaryPack::PackBool(tmpbuf+pos, (fdr != nullptr) );
-                pos += retlen;
-                
-                if ( fdr != nullptr ) {
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getCumulativeTarget() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getCumulativeDecoy() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getQValue() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getCumulativeTargetNotch() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getCumulativeDecoyNotch() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getQValueNotch() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getMaximumLikelihood() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getEValue() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackDouble(tmpbuf+pos, fdr->getEScore() );
-                    pos += retlen;
-                    retlen = BinaryPack::PackBool(tmpbuf+pos, fdr->getCalculateEValue() );
-                    pos += retlen;                
-                }
-                // set lenght of line right at the beginning.
-                BinaryPack::SetLineLength(tmpbuf, pos);
-                
-                buf_len = pos;
-
-                if ( pos > buf_len ) {
-                    return -1;
-                }
-                memcpy ( buf, tmpbuf, pos );
-                return (int)pos;
+		std::stringstream sstream;
+		bool has_fdr = (fdr != nullptr);
+    								
+    		if (has_fdr) {
+    	
+    			SerializedFdrInfo sFdr = {
+    				fdr->getCumulativeTarget(),
+    				fdr->getCumulativeDecoy(),
+    				fdr->getQValue(),
+    				fdr->getCumulativeTargetNotch(),
+    				fdr->getCumulativeDecoyNotch(),
+    				fdr->getQValueNotch(),
+    				fdr->getMaximumLikelihood(),
+    				fdr->getEValue(),
+    				fdr->getEScore(),
+    				fdr->getCalculateEValue(),
+    				has_fdr,
+    			};
+    			msgpack::pack(sstream, sFdr);
+    			const std::string& tmp = sstream.str();
+			const char* buf = tmp.c_str();
+			return buf;
+    		}
+    		return nullptr;
             }
+	
+	    void FdrInfo::Unpack(char* buf, FdrInfo **newfdr)
+      	    {
+            	double cumulativeTarget, cumulativeDecoy, qValue, cumulativeTargetNotch;
+            	double cumulativeDecoyNotch, qValueNotch, maximumLikelihood, eValue, eScore;
+            	bool calculateEValue=false;
+            	bool has_fdr = false;
 
-            void FdrInfo::Unpack( char* buf, size_t &len, FdrInfo **newfdr )
-            {
-                double cumulativeTarget, cumulativeDecoy, qValue, cumulativeTargetNotch;
-                double cumulativeDecoyNotch, qValueNotch, maximumLikelihood, eValue, eScore;
-                bool calculateEValue=false;
-                bool has_fdr = false;
-                
-                size_t pos = 0;
-                int linelen, retlen;
-                retlen = BinaryPack::GetLineLength(buf, linelen);
-                pos += retlen;
-                
-                retlen = BinaryPack::UnpackBool ( buf+pos, has_fdr );
-                pos += retlen;
-                
-                if ( has_fdr ) {
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, cumulativeTarget );
-                    pos += retlen;
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, cumulativeDecoy );
-                    pos += retlen;
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, qValue );
-                    pos += retlen;
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, cumulativeTargetNotch );
-                    pos += retlen;
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, cumulativeDecoyNotch );
-                    pos += retlen;
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, qValueNotch );
-                    pos += retlen;
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, maximumLikelihood );
-                    pos += retlen;
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, eValue );
-                    pos += retlen;
-                    retlen = BinaryPack::UnpackDouble ( buf+pos, eScore );
-                    pos += retlen;
-                    
-                    retlen = BinaryPack::UnpackBool ( buf+pos, calculateEValue);
-                    pos += retlen;
-                }
-                
-                if ( has_fdr ) {
-                    FdrInfo* tempVar= new FdrInfo();
-                    tempVar->setCumulativeTarget(cumulativeTarget);
-                    tempVar->setCumulativeDecoy(cumulativeDecoy);
-                    tempVar->setQValue(qValue);
-                    tempVar->setCumulativeTargetNotch(cumulativeTargetNotch);
-                    tempVar->setCumulativeDecoyNotch(cumulativeDecoyNotch);
-                    tempVar->setQValueNotch(qValueNotch);
-                    tempVar->setMaximumLikelihood(maximumLikelihood);
-                    tempVar->setEScore(eScore);
-                    tempVar->setEValue(eValue);
-                    tempVar->setCalculateEValue(calculateEValue);
+            	std::stringstream buffer;
+            	buffer << buf;
 
-                    *newfdr = tempVar;
-                }
-                else {
-                    *newfdr = nullptr;
-                }
+            	msgpack::object_handle objHandle = msgpack::unpack(buffer.str().data(), buffer.str().size());
+            	msgpack::object const& obj = objHandle.get();
+            	auto sFdrInfo = obj.as<SerializedFdrInfo>();
 
-                len = linelen;
+            	has_fdr = sFdrInfo.has_fdr;
+
+            	if (has_fdr) {
+
+                	FdrInfo* tempVar= new FdrInfo();
+
+                	tempVar->setCumulativeTarget(sFdrInfo.cumulativeTarget);
+                	tempVar->setCumulativeDecoy(sFdrInfo.cumulativeDecoy);
+                	tempVar->setQValue(sFdrInfo.qValue);
+                	tempVar->setCumulativeTargetNotch(sFdrInfo.cumulativeTargetNotch);
+                	tempVar->setCumulativeDecoyNotch(sFdrInfo.cumulativeDecoyNotch);
+                	tempVar->setQValueNotch(sFdrInfo.qValueNotch);
+                	tempVar->setMaximumLikelihood(sFdrInfo.maximumLikelihood);
+                	tempVar->setEScore(sFdrInfo.eScore);
+                	tempVar->setEValue(sFdrInfo.eValue);
+                	tempVar->setCalculateEValue(sFdrInfo.calculateEValue);
+
+                	*newfdr = tempVar;
+            	}
+            	else {
+                	*newfdr = nullptr;
+            	}
             }
         }
 }
