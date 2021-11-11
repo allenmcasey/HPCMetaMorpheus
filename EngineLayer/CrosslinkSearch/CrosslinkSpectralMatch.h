@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../PeptideSpectralMatch.h"
 #include "PsmCrossType.h"
@@ -107,7 +107,7 @@ namespace EngineLayer
             static int Pack ( char *buf, size_t &buf_size, CrosslinkSpectralMatch *csm);
             static int Pack ( char *buf, size_t &buf_size, const std::vector<CrosslinkSpectralMatch *> &csmVec);
 
-            static int Pack_internal ( char *buf, size_t &buf_size, CrosslinkSpectralMatch *csm);
+            static SerializedCrosslinkSpectralMatch Pack_internal(CrosslinkSpectralMatch *csm);
 
             
             
@@ -134,11 +134,11 @@ namespace EngineLayer
                                  const std::vector<Modification*> &mods,
                                  const std::vector<Protein *> &proteinList );
 
-            static void Unpack_internal ( std::vector<char *> &input, int &index, size_t &len,
-                                          CrosslinkSpectralMatch** newCsm,
-                                          const std::vector<Modification*> &mods,
-                                          const std::vector<Protein* > &proteinList,
-                                          bool &has_beta_peptide);
+            static void Unpack_internal(SerializedCrosslinkSpectralMatch sCsm,
+                                        CrosslinkSpectralMatch** newCsm,
+                                        const std::vector<Modification*> &mods,
+                                        const std::vector<Protein *> &proteinList,
+                                        bool &has_beta_peptide);
             
         };
     }

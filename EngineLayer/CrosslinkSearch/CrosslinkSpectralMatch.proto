@@ -1,0 +1,50 @@
+syntax = "proto3"
+
+import "FdrInfo.proto"
+import "MatchedFragmentIon.proto"
+import "PeptideWithSetModifications.proto"
+
+message SerializedCrosslinkSpectralMatch {
+
+    optional int32 notchValue = 1;
+    optional int32 scanNumber = 2;
+    optional int32 xlProteinPos = 3;
+    optional int32 matchedFragmentIonsSize = 4;
+    optional int32 lPositionsSize = 5;
+    optional int32 xlRanksSize = 6;
+    optional int32 precursorScanNumber = 7;
+    optional int32 scanExperimentalPeaks = 8;
+    optional int32 scanPrecursorCharge = 9;
+    
+    optional double xlTotalScore = 10;
+    optional double deltaScore = 11;
+    optional double score = 12;
+    optional double runnerUpScore 13;
+    optional double peptideMonoisotopicMass = 14;
+    optional double scanRetentionTime = 15;
+    optional double totalIonCurrent = 16;
+    optional double scanPrecursorMonoisotopicPeakMz = 17;
+    optional double scanPrecursorMass = 18;
+    
+    optional bool hasNotchValue = 19;
+    optional bool hasBetaPeptide = 20;
+    optional bool hasPrecursorScanNumber = 21;
+
+    optional string psmCrossTypeAsString = 22;
+    optional string fullFilePath = 23;
+    optional string digestionParamsString = 24;
+
+    repeated int32 lPositions = 25 [packed = true];
+    repeated int32 xRanks = 26 [packed = true];
+
+    optional SerializedFdrInfo fdrInfo = 27;
+    optional SerializedPeptideWithSetmodifications peptide = 28;
+    repeated SerializedMatchedFragmentIon ions = 29
+
+}
+
+message SerializedCrosslinkSpectralMatchVec {
+
+    repeated SerializedCrosslinkSpectralMatch csms = 1;
+
+}

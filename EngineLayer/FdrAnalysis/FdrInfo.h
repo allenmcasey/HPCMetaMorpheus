@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 
@@ -60,6 +60,12 @@ namespace EngineLayer
             /// </summary>
             static int Pack( char* buf, size_t &buf_size, FdrInfo *fdr); 
 
+            /// <sumary>
+            /// this method is meant to be used internally by the CrosslinkSpectralMatch
+            /// packing process. 
+            /// </summary>
+            static SerializedFdrInfo Pack(FdrInfo *fdr);
+
             /// <summary>
             /// Functionality used to reconstruct an FdrInfo based on a
             /// packed buffer.
@@ -72,6 +78,15 @@ namespace EngineLayer
             ///
             /// </summary>
             static void Unpack( char* buf, size_t &len, FdrInfo **newfdr );
+
+            /// <sumary>
+            /// this method is meant to be used internally by the CrosslinkSpectralMatch
+            /// unpacking process. 
+            ///
+            /// Loads the serialized FdrInfo object into newFdr
+            /// </summary>
+            static void Unpack(SerializedFdrInfo sFdrInfo, FdrInfo **newfdr);
+
         };
     }
 }

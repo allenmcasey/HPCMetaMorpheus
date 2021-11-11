@@ -1,0 +1,18 @@
+syntax = "proto3"
+
+message SerializedFdrInfo {
+
+    optional double cumulativeTarget = 1;
+    optional double cumulativeDecoy = 2;
+    optional double qValue = 3;
+    optional double cumulativeTargetNotch = 4;
+    optional double cumulativeDecoyNotch = 5;
+    optional double qValueNotch = 6;
+    optional double maximumLikelihood = 7;
+    optional double eValue = 8;
+    optional double eScore = 9;
+
+    optional bool calculateEValue = 10;
+    optional bool hasFdr = 11;
+
+}
