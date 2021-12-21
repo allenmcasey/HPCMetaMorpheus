@@ -4,7 +4,7 @@
 
 #include "Sort.h"
 #include "BinaryPack.h"
-#include "CrosslinkSpectralMatch.ph.h"
+#include "CrosslinkSpectralMatch.pb.h"
 
 #include <numeric>
 #include <algorithm>
@@ -497,7 +497,7 @@ namespace EngineLayer
                 
                 // pack CSM and push to vector
                 SerializedCrosslinkSpectralMatch sCsm = CrosslinkSpectralMatch::Pack_internal(csm);
-                sCsmVec.push_back(sCsm);
+                *sCsmVec.add_csms() = sCsm;
                 
                 // check if csm has betapep
                 auto betaPeptide = csm->getBetaPeptide();
@@ -505,7 +505,7 @@ namespace EngineLayer
 
                     // pack betapep and push to vector
                     SerializedCrosslinkSpectralMatch sBetaPeptide = CrosslinkSpectralMatch::Pack_internal(betaPeptide);
-                    sCsmVec.push_back(sBetaPeptide);                    
+                    *sCsmVec.add_csms() = sBetaPeptide;      
                 }
             }
 
@@ -532,7 +532,7 @@ namespace EngineLayer
    
             auto betaPeptide = csm->getBetaPeptide();
             if ( betaPeptide != nullptr ) {
-                csvVec.push_back(betaPeptide);               
+                csmVec.push_back(betaPeptide);               
             }
             
             int pos = CrosslinkSpectralMatch::Pack(buf, buf_len, csmVec);
@@ -558,8 +558,8 @@ namespace EngineLayer
                 sCsm.set_notchvalue(csm->getNotch().value());
             }
             
-            sCsm.set_xltotaltcore(csm->getXLTotalScore());
-            sCsm.set_deltascore(sm->getDeltaScore());
+            sCsm.set_xltotalscore(csm->getXLTotalScore());
+            sCsm.set_deltascore(csm->getDeltaScore());
             sCsm.set_score(csm->getScore());
             sCsm.set_runnerupscore(csm->getRunnerUpScore());
             sCsm.set_peptidemonoisotopicmass(csm->getPeptideMonisotopicMass().value());
@@ -568,7 +568,7 @@ namespace EngineLayer
             sCsm.set_xlproteinpos(csm->getXlProteinPos());
             sCsm.set_matchedfragmentionssize((int)csm->getMatchedFragmentIons().size());
             sCsm.set_lpositionssize((int)lPositions.size());
-            sCsm.set_xlranksrize((int)xlRanks.size());
+            sCsm.set_xlrankssize((int)xlRanks.size());
 
             sCsm.set_hasbetapeptide(has_beta_peptide);
                         
@@ -596,14 +596,14 @@ namespace EngineLayer
 
             // this routine sets all the required aspects of a packed line (e.g. header, length)
             SerializedFdrInfo sFdr = FdrInfo::Pack(fdr);
-            sCsm.set_fdrinfo(sFdr);
+            *sCsm.mutable_fdrinfo() = sFdr;
 
             for (auto lp: lPositions) {
-                sCsm.add_lpositions() = lp;
+            	sCsm.add_lpositions(lp);
             }
 
             for ( auto xl: xlRanks) {
-                sCsm.add_xlranks() = xl;
+                sCsm.add_xranks(xl);
             }
             
             std::string s = dp->ToString();
@@ -617,12 +617,12 @@ namespace EngineLayer
             auto pep = std::get<0>(*uMapPep.begin());
 
             SerializedPeptideWithSetModifications sPep = PeptideWithSetModifications::Pack(pep);
-            sCsm.set_peptide(sPep);
+            *sCsm.mutable_peptide() = sPep;
             
             //line 11-x: one line for each MatchedFragmentIon
             for ( auto i=0; i< mFrIons.size(); i++ ) {
                 SerializedMatchedFragmentIon sMaF = MatchedFragmentIon::Pack(mFrIons[i]);
-                sCsm.add_ions() = sMaF;
+                *sCsm.add_ions() = sMaF;
             }
             
             return sCsm;
@@ -691,7 +691,7 @@ namespace EngineLayer
         {           
             // create CSM vector, call Unpack's vector version
             std::vector<CrosslinkSpectralMatch*> csmVec;
-            CrosslinkSpectralMatch::Unpack(buf, buf_len, len, csmVec, mods, proteinList);
+            CrosslinkSpectralMatch::Unpack(buf, buf_len, 1, len, csmVec, mods, proteinList);
             if (csmVec.size() > 1) {
                 *newCsm = csmVec[0];
             }
@@ -714,7 +714,7 @@ namespace EngineLayer
             }
 
             XLTotalScore = sCsm.xltotalscore();
-            deltaScore = sCsm.seltascore();
+            deltaScore = sCsm.deltascore();
             score = sCsm.score();
             runnerUpScore =sCsm.runnerupscore();
             peptideMonisotopicMass = sCsm.peptidemonoisotopicmass();
@@ -775,7 +775,7 @@ namespace EngineLayer
 #endif
             
             // get serialized MaFIons from serialized CSM
-            std::vector<SerializedMatchedFragmention> tempMaFVec = {sCsm.ions().begin(), sCsm.ions().end()};
+            std::vector<SerializedMatchedFragmentIon> tempMaFVec = {sCsm.ions().begin(), sCsm.ions().end()};
 
             // declare new MaFIon vec
             std::vector<MatchedFragmentIon*> matchedFragmentIonsVec;

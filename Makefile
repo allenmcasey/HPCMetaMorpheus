@@ -9,11 +9,17 @@
 include Makefile.defs
 
 
-all:    
+all:
 	cd mzlib ; $(MAKE) ; cd ..
 	cd EngineLayer ; $(MAKE) ; cd ..
 	cd TaskLayer ; $(MAKE) ; cd ..
 	cd CMD ; $(MAKE) ; cd ..
+
+proto:
+	cd mzlib/Proteomics/ProteolyticDigestion ; $(MAKE) proto ; cd ../../..
+	cd mzlib/Proteomics/Fragmentation ; $(MAKE) proto ; cd ../../..
+	cd EngineLayer/FdrAnalysis ; $(MAKE) proto ; cd ../..
+	cd EngineLayer/CrosslinkSearch ; $(MAKE) proto ; cd ../..	
 
 clean:  
 	cd mzlib ; $(MAKE) clean ; cd ..

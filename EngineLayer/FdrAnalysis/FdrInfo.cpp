@@ -2,7 +2,6 @@
 #include "FdrInfo.h"
 
 #include <string.h>
-#include "BinaryPack.h"
 
 namespace EngineLayer
 {
@@ -114,20 +113,20 @@ namespace EngineLayer
             {
                 SerializedFdrInfo sFdrInfo;
 
-                sFdrInfo.set_hasFdr(fdr != nullptr);
+                sFdrInfo.set_hasfdr(fdr != nullptr);
                 
                 // build serialized fdr if it exists
                 if (fdr != nullptr) {
-                    sFdrInfo.set_cumulativeTarget(fdr->getCumulativeTarget());
-                    sFdrInfo.set_cumulativeDecoy(fdr->getCumulativeDecoy());
-                    sFdrInfo.set_qValue(fdr->getQValue());
-                    sFdrInfo.set_cumulativeTargetNotch(fdr->getCumulativeTargetNotch());
-                    sFdrInfo.set_cumulativeDecoyNotch(fdr->getCumulativeDecoyNotch());
-                    sFdrInfo.set_qValueNotch(fdr->getQValueNotch());
-                    sFdrInfo.set_maximumLikelihood(fdr->getMaximumLikelihood());
-                    sFdrInfo.set_eValue(fdr->getEValue());
-                    sFdrInfo.set_eScore(fdr->getEScore());
-                    sFdrInfo.set_calculateEValue(fdr->getCalculateEValue());
+                    sFdrInfo.set_cumulativetarget(fdr->getCumulativeTarget());
+                    sFdrInfo.set_cumulativedecoy(fdr->getCumulativeDecoy());
+                    sFdrInfo.set_qvalue(fdr->getQValue());
+                    sFdrInfo.set_cumulativetargetnotch(fdr->getCumulativeTargetNotch());
+                    sFdrInfo.set_cumulativedecoynotch(fdr->getCumulativeDecoyNotch());
+                    sFdrInfo.set_qvaluenotch(fdr->getQValueNotch());
+                    sFdrInfo.set_maximumlikelihood(fdr->getMaximumLikelihood());
+                    sFdrInfo.set_evalue(fdr->getEValue());
+                    sFdrInfo.set_escore(fdr->getEScore());
+                    sFdrInfo.set_calculateevalue(fdr->getCalculateEValue());
                 }
 
                 return sFdrInfo;
@@ -137,20 +136,20 @@ namespace EngineLayer
             {
                 SerializedFdrInfo sFdrInfo;
 
-                sFdrInfo.set_hasFdr(fdr != nullptr);
+                sFdrInfo.set_hasfdr(fdr != nullptr);
                 
                 // build serialized fdr if it exists
                 if (fdr != nullptr) {
-                    sFdrInfo.set_cumulativeTarget(fdr->getCumulativeTarget());
-                    sFdrInfo.set_cumulativeDecoy(fdr->getCumulativeDecoy());
-                    sFdrInfo.set_qValue(fdr->getQValue());
-                    sFdrInfo.set_cumulativeTargetNotch(fdr->getCumulativeTargetNotch());
-                    sFdrInfo.set_cumulativeDecoyNotch(fdr->getCumulativeDecoyNotch());
-                    sFdrInfo.set_qValueNotch(fdr->getQValueNotch());
-                    sFdrInfo.set_maximumLikelihood(fdr->getMaximumLikelihood());
-                    sFdrInfo.set_eValue(fdr->getEValue());
-                    sFdrInfo.set_eScore(fdr->getEScore());
-                    sFdrInfo.set_calculateEValue(fdr->getCalculateEValue());
+                    sFdrInfo.set_cumulativetarget(fdr->getCumulativeTarget());
+                    sFdrInfo.set_cumulativedecoy(fdr->getCumulativeDecoy());
+                    sFdrInfo.set_qvalue(fdr->getQValue());
+                    sFdrInfo.set_cumulativetargetnotch(fdr->getCumulativeTargetNotch());
+                    sFdrInfo.set_cumulativedecoynotch(fdr->getCumulativeDecoyNotch());
+                    sFdrInfo.set_qvaluenotch(fdr->getQValueNotch());
+                    sFdrInfo.set_maximumlikelihood(fdr->getMaximumLikelihood());
+                    sFdrInfo.set_evalue(fdr->getEValue());
+                    sFdrInfo.set_escore(fdr->getEScore());
+                    sFdrInfo.set_calculateevalue(fdr->getCalculateEValue());
                 }
                 
                 // serialize FdrInfo

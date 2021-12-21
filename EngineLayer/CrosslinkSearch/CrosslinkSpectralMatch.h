@@ -11,6 +11,8 @@
 #include "../Ms2ScanWithSpecificMass.h"
 #include "../PeptideSpectralMatch.h"
 
+#include "CrosslinkSpectralMatch.pb.h"
+
 #include "Proteomics/Proteomics.h"
 using namespace Proteomics::Fragmentation;
 using namespace Proteomics::ProteolyticDigestion;

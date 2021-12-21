@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "FdrInfo.pb.h"
+
 namespace EngineLayer
 {
     namespace FdrAnalysis

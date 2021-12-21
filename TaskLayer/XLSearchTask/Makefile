@@ -27,7 +27,10 @@ $(MMORPHEUS_LIB): $(HEADER) $(OBJ)
 
 $(OBJ):	$(HEADER)
 .cpp.o:	$(HEADER)
-	$(CXX) $(CXXFLAGS) -c $<
+	$(CXX) $(CXXFLAGS) -I../../EngineLayer/FdrAnalysis -I../../mzlib/Proteomics/ProteolyticDigestion -I../../mzlib/Proteomics/Fragmentation -c $<
+
+.cc.o: $(HEADER)
+	$(CXX) $(CXXFLAGS) -I../../EngineLayer/FdrAnalysis -I../../mzlib/Proteomics/ProteolyticDigestion -I../../mzlib/Proteomics/Fragmentation -c $<
 
 clean:  
 	rm -rf *.o *~

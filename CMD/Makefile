@@ -19,7 +19,10 @@ all:
 
 $(OBJ):	
 .cpp.o:	
-	$(CXX) $(CXXFLAGS) -c $<
+	$(CXX) $(CXXFLAGS) -I../EngineLayer/FdrAnalysis -I../mzlib/Proteomics/ProteolyticDigestion -I../mzlib/Proteomics/Fragmentation -c $<
+
+.cc.o:
+	$(CXX) $(CXXFLAGS) -I../EngineLayer/FdrAnalysis -I../mzlib/Proteomics/ProteolyticDigestion -I../mzlib/Proteomics/Fragmentation -c $<
 
 HPCMetaMorpheus: $(OBJ) $(LINKLIBS)
 	$(CXX) $(CXXFLAGS) $^ -o $(MMORPHEUS_BIN_DIR)/$(MMORPHEUS_EXEC) $(LDFLAGS)

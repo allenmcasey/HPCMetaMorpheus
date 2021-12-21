@@ -1,8 +1,8 @@
-syntax = "proto3"
+syntax = "proto2";
 
-import "FdrInfo.proto"
-import "MatchedFragmentIon.proto"
-import "PeptideWithSetModifications.proto"
+import "FdrInfo.proto";
+import "MatchedFragmentIon.proto";
+import "PeptideWithSetModifications.proto";
 
 message SerializedCrosslinkSpectralMatch {
 
@@ -19,7 +19,7 @@ message SerializedCrosslinkSpectralMatch {
     optional double xlTotalScore = 10;
     optional double deltaScore = 11;
     optional double score = 12;
-    optional double runnerUpScore 13;
+    optional double runnerUpScore = 13;
     optional double peptideMonoisotopicMass = 14;
     optional double scanRetentionTime = 15;
     optional double totalIonCurrent = 16;
@@ -38,8 +38,8 @@ message SerializedCrosslinkSpectralMatch {
     repeated int32 xRanks = 26 [packed = true];
 
     optional SerializedFdrInfo fdrInfo = 27;
-    optional SerializedPeptideWithSetmodifications peptide = 28;
-    repeated SerializedMatchedFragmentIon ions = 29
+    optional SerializedPeptideWithSetModifications peptide = 28;
+    repeated SerializedMatchedFragmentIon ions = 29;
 
 }
 
