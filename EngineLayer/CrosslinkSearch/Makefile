@@ -31,18 +31,18 @@ OBJ = 	  BestPeptideScoreNotch.o  \
 all:
 	$(MAKE) $(MMORPHEUS_LIB)
 
-#CrosslinkSpectralMatch.pb.o: CrosslinkSpectralMatch.cpp $(HEADER)
-#	$(CXX) $(CXXFLAGS) -I/. -I/../FdrAnalysis CrosslinkSpectralMatch.cpp CrosslinkSpectralMatch.pb.cc -c -lprotobuf -pthread
+#CrosslinkSpectralMatch.o: CrosslinkSpectralMatch.cpp $(HEADER)
+#	$(CXX) $(CXXFLAGS) -I/../FdrAnalysis -I../../mzlib/Proteomics/ProteolyticDigestion -I../../mzlib/Proteomics/Fragmentation CrosslinkSpectralMatch.cpp CrosslinkSpectralMatch.pb.cc -c -lprotobuf
 
 $(MMORPHEUS_LIB): $(HEADER) $(OBJ)
 	$(AR) $(AR_FLAGS) $(MMORPHEUS_LIB_DIR)/$(MMORPHEUS_LIB) $(OBJ) -lprotobuf -pthread
 
 $(OBJ):	$(HEADER)
 .cpp.o:	$(HEADER)
-	$(CXX) $(CXXFLAGS) -I../FdrAnalysis -I../../mzlib/Proteomics/ProteolyticDigestion -I../../mzlib/Proteomics/Fragmentation -c $@ $< -lprotobuf -pthread
+	$(CXX) $(CXXFLAGS) -I../FdrAnalysis -I../../mzlib/Proteomics/ProteolyticDigestion -I../../mzlib/Proteomics/Fragmentation -c $< -lprotobuf -pthread
 
 .cc.o: $(HEADER)
-	$(CXX) $(CXXFLAGS) -I../FdrAnalysis -I../../mzlib/Proteomics/ProteolyticDigestion -I../../mzlib/Proteomics/Fragmentation -c $@ $< -lprotobuf -pthread
+	$(CXX) $(CXXFLAGS) -I../FdrAnalysis -I../../mzlib/Proteomics/ProteolyticDigestion -I../../mzlib/Proteomics/Fragmentation -c $< -lprotobuf -pthread
 
 clean:  
 	rm -rf *.o *~
