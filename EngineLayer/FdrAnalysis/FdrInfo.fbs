@@ -1,0 +1,18 @@
+table SerializedFdrInfo {
+
+    cumulativeTarget:double;
+    cumulativeDecoy:double;
+    qValue:double;
+    cumulativeTargetNotch:double;
+    cumulativeDecoyNotch:double;
+    qValueNotch:double;
+    maximumLikelihood:double;
+    eValue:double;
+    eScore:double;
+
+    calculateEValue:bool;
+    hasFdr:bool;
+
+}
+
+root_type SerializedFdrInfo;

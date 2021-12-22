@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 
@@ -55,10 +55,13 @@ namespace EngineLayer
             ///
             /// Return value:
             ///   -1 : input buffer was not large enough. buf_size will contain the required number
-            ///        of bytes in this case
+            ///        of bytes in this case 
             ///   >0 : packing successful, number of bytes used up.
             /// </summary>
-            static int Pack( char* buf, size_t &buf_size, FdrInfo *fdr); 
+            static int Pack(char* buf, size_t &buf_size, FdrInfo *fdr);
+
+            // used internally within CrosslinkSpectralMatch packing
+            static SerializedFdrInfo Pack(FdrInfo *fdr);
 
             /// <summary>
             /// Functionality used to reconstruct an FdrInfo based on a
@@ -71,7 +74,10 @@ namespace EngineLayer
             /// newFdr:   OUT new FdrInfo(s). Can be nullptr.
             ///
             /// </summary>
-            static void Unpack( char* buf, size_t &len, FdrInfo **newfdr );
+            static void Unpack(char* buf, size_t &len, FdrInfo **newfdr );
+
+            // used internally within CrosslinkSpectralMatch unpacking
+            static SerializedFdrInfo Unpack(SerializedFdrInfo sFdr, FdrInfo **newfdr);
         };
     }
 }

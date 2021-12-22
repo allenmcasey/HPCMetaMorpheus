@@ -1,0 +1,46 @@
+table SerializedCrosslinkSpectralMatch {
+
+    notchValue:int;
+    scanNumber:int;
+    xlProteinPos:int;
+    matchedFragmentIonsSize:int;
+    lPositionsSize:int;
+    xlRanksSize:int;
+    precursorScanNumber:int;
+    scanExperimentalPeaks:int;
+    scanPrecursorCharge:int;
+
+    xlTotalScore:double;
+    deltaScore:double;
+    score:double;
+    runnerUpScore:double;
+    peptideMonoisotopicMass:double;
+    scanRetentionTime:double;
+    totalIonCurrent:double;
+    scanPrecursorMonoisotopicPeakMz:double;
+    scanPrecursorMass:double;
+
+    hasNotchValue:bool;
+    hasBetaPeptide:bool;
+    hasPrecursorScanNumber:bool;
+
+    psmCrossTypeAsString:string;
+    fullFilePath:string;
+    digestionParamsString:string;
+
+    lPositions:[int];
+    xlRanks:[int];
+
+    fdrInfo:SerializedFdrInfo;
+    peptide:SerializedPeptideWithSetModifications;
+    ions:[SerializedMatchedFragmentIon];
+
+}
+
+table SerializedCrosslinkSpectralMatchVec {
+
+    csms:[SerializedCrosslinkSpectralMatch];
+
+}
+
+root_type SerializedCrosslinkSpectralMatchVec;
