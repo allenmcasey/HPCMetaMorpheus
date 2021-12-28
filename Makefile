@@ -15,6 +15,12 @@ all:
 	cd TaskLayer ; $(MAKE) ; cd ..
 	cd CMD ; $(MAKE) ; cd ..
 
+flatbuffers:
+	cd mzlib/Proteomics/ProteolyticDigestion ; $(MAKE) flatbuffers ; cd ../../..
+	cd mzlib/Proteomics/Fragmentation ; $(MAKE) flatbuffers ; cd ../../..
+	cd EngineLayer/FdrAnalysis ; $(MAKE) flatbuffers ; cd ../..
+	cd EngineLayer/CrosslinkSearch ; $(MAKE) flatbuffers ; cd ../..
+
 clean:  
 	cd mzlib ; $(MAKE) clean ; cd ..
 	cd EngineLayer ; $(MAKE) clean ; cd ..

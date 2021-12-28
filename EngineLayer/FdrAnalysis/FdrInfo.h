@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FdrInfo_generated.h"
 #include <string>
 
 namespace EngineLayer
@@ -61,7 +62,7 @@ namespace EngineLayer
             static int Pack(char* buf, size_t &buf_size, FdrInfo *fdr);
 
             // used internally within CrosslinkSpectralMatch packing
-            static SerializedFdrInfo Pack(FdrInfo *fdr);
+            static flatbuffers::Offset<SerializedFdrInfo> Pack(FdrInfo *fdr);
 
             /// <summary>
             /// Functionality used to reconstruct an FdrInfo based on a
@@ -77,7 +78,7 @@ namespace EngineLayer
             static void Unpack(char* buf, size_t &len, FdrInfo **newfdr );
 
             // used internally within CrosslinkSpectralMatch unpacking
-            static SerializedFdrInfo Unpack(SerializedFdrInfo sFdr, FdrInfo **newfdr);
+            static void Unpack(const SerializedFdrInfo* sFdr, FdrInfo **newfdr);
         };
     }
 }

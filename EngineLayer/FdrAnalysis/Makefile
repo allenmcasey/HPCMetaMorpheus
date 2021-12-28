@@ -11,21 +11,23 @@ include ../../Makefile.defs
 HEADER =  FdrAnalysisEngine.h  FdrAnalysisResults.h  FdrInfo.h
 
 
-OBJ = 	  FdrAnalysisEngine.o  FdrAnalysisResults.o  FdrInfo.o
+OBJ =     FdrAnalysisEngine.o  FdrAnalysisResults.o  FdrInfo.o
 
 
 .SUFFIXES: .o.cpp
 
-all:    
-	$(MAKE) $(MMORPHEUS_LIB) 
+all:
+	$(MAKE) $(MMORPHEUS_LIB)
 
-
-$(MMORPHEUS_LIB): $(HEADER) $(OBJ) 
+$(MMORPHEUS_LIB): $(HEADER) $(OBJ)
 	$(AR) $(AR_FLAGS) $(MMORPHEUS_LIB_DIR)/$(MMORPHEUS_LIB) $(OBJ)
 
-$(OBJ):	$(HEADER)
-.cpp.o:	$(HEADER)
+$(OBJ): $(HEADER)
+.cpp.o: $(HEADER)
 	$(CXX) $(CXXFLAGS) -c $<
 
-clean:  
+clean:
 	rm -rf *.o *~
+
+flatbuffers:
+	flatc --cpp FdrInfo.fbs

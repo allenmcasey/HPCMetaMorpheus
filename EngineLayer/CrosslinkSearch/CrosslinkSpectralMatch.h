@@ -7,6 +7,7 @@
 #include <vector>
 #include "stringhelper.h"
 #include "stringbuilder.h"
+#include "CrosslinkSpectralMatch_generated.h"
 
 #include "../Ms2ScanWithSpecificMass.h"
 #include "../PeptideSpectralMatch.h"
@@ -107,7 +108,7 @@ namespace EngineLayer
             static int Pack ( char *buf, size_t &buf_size, CrosslinkSpectralMatch *csm);
             static int Pack ( char *buf, size_t &buf_size, const std::vector<CrosslinkSpectralMatch *> &csmVec);
 
-            static SerializedCrosslinkSpectralMatch Pack_internal(CrosslinkSpectralMatch *csm);
+            static flatbuffers::Offset<SerializedCrosslinkSpectralMatch> Pack_internal(CrosslinkSpectralMatch *csm);
 
             
             
@@ -134,7 +135,7 @@ namespace EngineLayer
                                  const std::vector<Modification*> &mods,
                                  const std::vector<Protein *> &proteinList );
 
-            static void Unpack_internal(SerializedCrosslinkSpectralMatch sCsm,
+            static void Unpack_internal(const SerializedCrosslinkSpectralMatch* sCsm,
                                         CrosslinkSpectralMatch** newCsm,
                                         const std::vector<Modification*> &mods,
                                         const std::vector<Protein *> &proteinList,

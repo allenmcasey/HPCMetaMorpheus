@@ -1,4 +1,5 @@
 #include "FdrInfo.h"
+#include "FdrInfo_generated.h"
 
 #include <string.h>
 #include "BinaryPack.h"
@@ -106,6 +107,37 @@ namespace EngineLayer
             {
                 privateEScore = value;
             }
+
+	    // for use in CSM packing
+	    flatbuffers::Offset<SerializedFdrInfo> FdrInfo::Pack(FdrInfo *fdr)
+	    {
+		flatbuffers::FlatBufferBuilder builder;
+                bool hasFdr = (fdr != nullptr);
+
+                // build serialized fdr if it exists
+                if (hasFdr) {
+                    double cumulativeTarget = fdr->getCumulativeTarget();
+                    double cumulativeDecoy = fdr->getCumulativeDecoy();
+                    double qValue = fdr->getQValue();
+                    double cumulativeTargetNotch = fdr->getCumulativeTargetNotch();
+                    double cumulativeDecoyNotch = fdr->getCumulativeDecoyNotch();
+                    double qValueNotch = fdr->getQValueNotch();;
+                    double maximumLikelihood = fdr->getMaximumLikelihood();
+                    double eValue = fdr->getEValue();
+                    double eScore = fdr->getEScore();
+                    bool calculateEValue = fdr->getCalculateEValue();
+
+                    auto fdrInfo = CreateSerializedFdrInfo(builder, cumulativeTarget, cumulativeDecoy, qValue,
+                                                        cumulativeTargetNotch, cumulativeDecoyNotch,
+                                                        qValueNotch, maximumLikelihood, eValue, eScore,
+                                                        calculateEValue, hasFdr);
+                    return fdrInfo;
+                }
+                else {
+                    auto fdrInfo = CreateSerializedFdrInfo(builder, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, hasFdr);
+                    return fdrInfo;
+                }
+	    }
             
             int FdrInfo::Pack( char* buf, size_t &buf_len, FdrInfo *fdr)
             {
@@ -129,46 +161,46 @@ namespace EngineLayer
                                                         cumulativeTargetNotch, cumulativeDecoyNotch,
                                                         qValueNotch, maximumLikelihood, eValue, eScore,
                                                         calculateEValue, hasFdr);
+		    builder.Finish(fdrInfo);
                 }
                 else {
                     auto fdrInfo = CreateSerializedFdrInfo(builder, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, hasFdr);
-                }
+                    builder.Finish(fdrInfo);
+		}
                 
-                // serialize FdrInfo
-                builder.Finish(fdrInfo);
                 char* tempBuf = (char*)builder.GetBufferPointer();
 
                 int pos = builder.GetSize();
                 
                 // copy to buffer
-                memcpy(buf, tmpbuf, pos);
+                memcpy(buf, tempBuf, pos);
                 buf_len = pos;
                 return pos;
             }
 
             // for use in CSM unpacking
-            void FdrInfo::Unpack(SerializedFdrInfo sFdrInfo, FdrInfo **newfdr)
+            void FdrInfo::Unpack(const SerializedFdrInfo* sFdrInfo, FdrInfo **newfdr)
             {
                 double cumulativeTarget, cumulativeDecoy, qValue, cumulativeTargetNotch;
                 double cumulativeDecoyNotch, qValueNotch, maximumLikelihood, eValue, eScore;
                 bool calculateEValue = false;
                 bool has_fdr = false;
 
-                bool has_fdr = sFdrInfo.hasFdr();
+               	has_fdr = sFdrInfo->hasFdr();
 
                 // rebuild fdr
                 if (has_fdr) {
                     FdrInfo* tempVar = new FdrInfo();
-                    tempVar->setCumulativeTarget(sFdrInfo.cumulativeTarget());
-                    tempVar->setCumulativeDecoy(sFdrInfo.cumulativeDecoy());
-                    tempVar->setQValue(sFdrInfo.qValue());
-                    tempVar->setCumulativeTargetNotch(sFdrInfo.cumulativeTargetNotch());
-                    tempVar->setCumulativeDecoyNotch(sFdrInfo.cumulativeDecoyNotch());
-                    tempVar->setQValueNotch(sFdrInfo.qValueNotch());
-                    tempVar->setMaximumLikelihood(sFdrInfo.maximumLikelihood());
-                    tempVar->setEScore(sFdrInfo.eScore());
-                    tempVar->setEValue(sFdrInfo.eValue());
-                    tempVar->setCalculateEValue(sFdrInfo.calculateEValue());
+                    tempVar->setCumulativeTarget(sFdrInfo->cumulativeTarget());
+                    tempVar->setCumulativeDecoy(sFdrInfo->cumulativeDecoy());
+                    tempVar->setQValue(sFdrInfo->qValue());
+                    tempVar->setCumulativeTargetNotch(sFdrInfo->cumulativeTargetNotch());
+                    tempVar->setCumulativeDecoyNotch(sFdrInfo->cumulativeDecoyNotch());
+                    tempVar->setQValueNotch(sFdrInfo->qValueNotch());
+                    tempVar->setMaximumLikelihood(sFdrInfo->maximumLikelihood());
+                    tempVar->setEScore(sFdrInfo->eScore());
+                    tempVar->setEValue(sFdrInfo->eValue());
+                    tempVar->setCalculateEValue(sFdrInfo->calculateEValue());
 
                     *newfdr = tempVar;
                 }
@@ -180,21 +212,21 @@ namespace EngineLayer
             void FdrInfo::Unpack(char* buf, size_t &len, FdrInfo **newfdr)
             {
                 auto sFdrInfo = GetSerializedFdrInfo((uint8_t*)buf);        
-                bool has_fdr = sFdrInfo.hasFdr();
+                bool has_fdr = sFdrInfo->hasFdr();
 
                 // rebuild fdr
                 if (has_fdr) {
                     FdrInfo* tempVar= new FdrInfo();
-                    tempVar->setCumulativeTarget(sFdrInfo.cumulativeTarget());
-                    tempVar->setCumulativeDecoy(sFdrInfo.cumulativeDecoy());
-                    tempVar->setQValue(sFdrInfo.qValue());
-                    tempVar->setCumulativeTargetNotch(sFdrInfo.cumulativeTargetNotch());
-                    tempVar->setCumulativeDecoyNotch(sFdrInfo.cumulativeDecoyNotch());
-                    tempVar->setQValueNotch(sFdrInfo.qValueNotch());
-                    tempVar->setMaximumLikelihood(sFdrInfo.maximumLikelihood());
-                    tempVar->setEScore(sFdrInfo.eScore());
-                    tempVar->setEValue(sFdrInfo.eValue());
-                    tempVar->setCalculateEValue(sFdrInfo.calculateEValue());
+                    tempVar->setCumulativeTarget(sFdrInfo->cumulativeTarget());
+                    tempVar->setCumulativeDecoy(sFdrInfo->cumulativeDecoy());
+                    tempVar->setQValue(sFdrInfo->qValue());
+                    tempVar->setCumulativeTargetNotch(sFdrInfo->cumulativeTargetNotch());
+                    tempVar->setCumulativeDecoyNotch(sFdrInfo->cumulativeDecoyNotch());
+                    tempVar->setQValueNotch(sFdrInfo->qValueNotch());
+                    tempVar->setMaximumLikelihood(sFdrInfo->maximumLikelihood());
+                    tempVar->setEScore(sFdrInfo->eScore());
+                    tempVar->setEValue(sFdrInfo->eValue());
+                    tempVar->setCalculateEValue(sFdrInfo->calculateEValue());
 
                     *newfdr = tempVar;
                 }

@@ -1,3 +1,7 @@
+include "FdrInfo.fbs";
+include "PeptideWithSetModifications.fbs";
+include "MatchedFragmentIon.fbs";
+
 table SerializedCrosslinkSpectralMatch {
 
     notchValue:int;
