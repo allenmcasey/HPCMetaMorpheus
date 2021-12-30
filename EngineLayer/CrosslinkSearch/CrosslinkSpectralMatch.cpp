@@ -363,8 +363,8 @@ namespace EngineLayer
             sb->append(std::to_string(getScanPrecursorCharge()) + "\t");
             sb->append(std::to_string(getScanPrecursorMass()) + "\t");
             auto crosslinktype = getCrossType();
-            sb->append(PsmCrossTypeToString(crosslinktype) + "\t");
-            
+            sb->append(PsmCrossTypeToString(crosslinktype) + "\t");            
+
             if (getLinkPositions().size() > 0)
             {
                 if (getCrossType() == PsmCrossType::Loop)
@@ -403,7 +403,7 @@ namespace EngineLayer
             sb->append("\t");
             sb->append(std::to_string(getScore()) + "\t");
             sb->append(std::to_string(getXlRank()[0]) + "\t");
-            
+
             for (auto mid : MatchedIonDataDictionary(this))
             {
                 sb->append(std::get<1>(mid));
@@ -460,6 +460,8 @@ namespace EngineLayer
                             : "-"));
                 sb->append("\t");                            
             }
+
+	    std::cout<< "5" << std::endl;
             
             if (getBetaPeptide() == nullptr)
             {
@@ -472,10 +474,19 @@ namespace EngineLayer
                            (getIsContaminant() || getBetaPeptide()->getIsContaminant()) ? "C" : "T");
                 sb->append("\t");
             }
-            
-            sb->append(std::to_string(getFdrInfo()->getQValue()));
+
+	    if (getFdrInfo() != nullptr)
+	    {
+		std::cout<< "not null" << std::endl;
+	    	sb->append(std::to_string(getFdrInfo()->getQValue()));
+	    }
+	    else
+	    {
+		std::cout<< "null" << std::endl;
+                sb->append(std::to_string(0.00000));
+	    }	
+
             sb->append("\t");
-            
             
             std::string s= sb->toString();
             delete sb;
@@ -493,18 +504,22 @@ namespace EngineLayer
         int CrosslinkSpectralMatch::Pack(char *buf, size_t &buf_len, const std::vector<CrosslinkSpectralMatch *> &csmVec)
         {
             std::vector<flatbuffers::Offset<SerializedCrosslinkSpectralMatch>> sCsmObjects;
-            flatbuffers::FlatBufferBuilder builder;
+            flatbuffers::FlatBufferBuilder builder(1024);
 
             for (auto csm: csmVec) {
                 
-                flatbuffers::Offset<SerializedCrosslinkSpectralMatch> sCsm = CrosslinkSpectralMatch::Pack_internal(csm);
+                flatbuffers::Offset<SerializedCrosslinkSpectralMatch> sCsm = CrosslinkSpectralMatch::Pack_internal(builder, csm);
                 sCsmObjects.push_back(sCsm);
                 
                 auto betaPeptide = csm->getBetaPeptide();
                 if (betaPeptide != nullptr) {
-                    flatbuffers::Offset<SerializedCrosslinkSpectralMatch> sBetaPeptide = CrosslinkSpectralMatch::Pack_internal(betaPeptide);
+		    std::cout << "Has BetaPep..." << std::endl;
+                    flatbuffers::Offset<SerializedCrosslinkSpectralMatch> sBetaPeptide = CrosslinkSpectralMatch::Pack_internal(builder, betaPeptide);
                     sCsmObjects.push_back(sBetaPeptide);                   
                 }
+	    	else {
+		    std::cout << "Doesn't Have BetaPep..." << std::endl; 
+		}
             }
 
             // create and serialize ion object vector
@@ -533,16 +548,14 @@ namespace EngineLayer
             return pos;      
         }
         
-        flatbuffers::Offset<SerializedCrosslinkSpectralMatch> CrosslinkSpectralMatch::Pack_internal(CrosslinkSpectralMatch *csm)
+        flatbuffers::Offset<SerializedCrosslinkSpectralMatch> CrosslinkSpectralMatch::Pack_internal(flatbuffers::FlatBufferBuilder &fbb, CrosslinkSpectralMatch *csm)
         {
-            flatbuffers::FlatBufferBuilder builder;
-
             auto mFrIons = csm->getMatchedFragmentIons ();
             auto dp = csm->digestionParams;
             auto uMapPep = csm->getPeptidesToMatchingFragments();
             std::vector<int> lPositions  = csm->getLinkPositions();
             std::vector<int> xlRanks = csm->getXlRank();
-            bool has_beta_peptide = csm->getBetaPeptide() != nullptr;       
+            bool has_beta_peptide = (csm->getBetaPeptide() != nullptr);       
 
             bool hasNotch = csm->getNotch().has_value(); 
             int notch = 0;  
@@ -563,7 +576,7 @@ namespace EngineLayer
             auto xlRanksSize = (int)xlRanks.size();
                         
             PsmCrossType ctype = csm->getCrossType();
-            auto cTypeString = builder.CreateString(PsmCrossTypeToString(ctype));
+            auto cTypeString = fbb.CreateString(PsmCrossTypeToString(ctype));
 
             //Information required to replace the Scan datastructure
             auto tvar = csm->getPrecursorScanNumber();
@@ -581,18 +594,22 @@ namespace EngineLayer
             auto scanPrecMonoPeakMz = csm->getScanPrecursorMonoisotopicPeakMz();
             auto scanPrecMass = csm->getScanPrecursorMass();
 
-            auto filepath = builder.CreateString(csm->getFullFilePath());
+            auto filepath = fbb.CreateString(csm->getFullFilePath());
 
             FdrInfo *fdr = csm->getFdrInfo();
-
+	    if (fdr == nullptr)
+		std::cout<< "fdr is null" << std::endl;
+	    else
+		std::cout<< "fdr NOT null" << std::endl;
+	
             // this routine sets all the required aspects of a packed line (e.g. header, length)
-            flatbuffers::Offset<SerializedFdrInfo> sFdr = FdrInfo::Pack(fdr);
+            flatbuffers::Offset<SerializedFdrInfo> sFdr = FdrInfo::Pack(fbb, fdr);
 
-            auto lpPositionVec = builder.CreateVector(lPositions);
-            auto xlRanksVec = builder.CreateVector(xlRanks);
+            auto lpPositionVec = fbb.CreateVector(lPositions);
+            auto xlRanksVec = fbb.CreateVector(xlRanks);
             
             std::string s = dp->ToString();
-            auto dpString = builder.CreateString(s);
+            auto dpString = fbb.CreateString(s);
                         
             //line 6-10: PeptideWithSetModifications;
             //Assuming right now only a single PeptideWithSetModifications
@@ -601,36 +618,60 @@ namespace EngineLayer
             }
             auto pep = std::get<0>(*uMapPep.begin());
 
-            flatbuffers::Offset<SerializedPeptideWithSetModifications> sPep = PeptideWithSetModifications::Pack(pep);
+            flatbuffers::Offset<SerializedPeptideWithSetModifications> sPep = PeptideWithSetModifications::Pack(fbb, pep);
             
             std::vector<flatbuffers::Offset<SerializedMatchedFragmentIon> > tempMaFVec;
             for (auto i = 0; i < mFrIons.size(); i++) {
-                flatbuffers::Offset<SerializedMatchedFragmentIon> sMaF = MatchedFragmentIon::Pack(mFrIons[i]);
+                flatbuffers::Offset<SerializedMatchedFragmentIon> sMaF = MatchedFragmentIon::Pack(fbb, mFrIons[i]);
                 tempMaFVec.push_back(sMaF);
             }
-            auto sMaFVec = builder.CreateVector(tempMaFVec);
+            auto sMaFVec = fbb.CreateVector(tempMaFVec);
 
-            auto sCsm = CreateSerializedCrosslinkSpectralMatch(builder, notch, scanNumber, xlProteinPos, matchedFragmentIonsSize, lPositionsSize,
-                                                                xlRanksSize, precScanNumber, expPeaks, scanPrecCharge, xlScore,
-                                                                deltaScore, score, runnerUpScore, peptideMonoMass, scanRetentionTime,
-                                                                totalIonCurrent, scanPrecMonoPeakMz, scanPrecMass, hasNotch, has_beta_peptide,
-                                                                hasPrecScanNumber, cTypeString, filepath, dpString, lpPositionVec,
-                                                                xlRanksVec, sFdr, sPep, sMaFVec);
-            
-            return sCsm;
+	    SerializedCrosslinkSpectralMatchBuilder builder(fbb);
+
+	    builder.add_notchValue(notch);
+	    builder.add_scanNumber(scanNumber);
+	    builder.add_xlProteinPos(xlProteinPos);
+	    builder.add_matchedFragmentIonsSize(matchedFragmentIonsSize);
+    	    builder.add_lPositionsSize(lPositionsSize);
+	    builder.add_xlRanksSize(xlRanksSize);
+	    builder.add_precursorScanNumber(precScanNumber);
+	    builder.add_scanExperimentalPeaks(expPeaks);
+	    builder.add_scanPrecursorCharge(scanPrecCharge);
+	    builder.add_xlTotalScore(xlScore);
+	    builder.add_deltaScore(deltaScore);
+	    builder.add_score(score);
+	    builder.add_runnerUpScore(runnerUpScore);
+	    builder.add_peptideMonoisotopicMass(peptideMonoMass);
+	    builder.add_scanRetentionTime(scanRetentionTime);
+	    builder.add_totalIonCurrent(totalIonCurrent);
+	    builder.add_scanPrecursorMonoisotopicPeakMz(scanPrecMonoPeakMz);
+	    builder.add_scanPrecursorMass(scanPrecMass);
+	    builder.add_hasNotchValue(hasNotch);
+	    builder.add_hasBetaPeptide(has_beta_peptide);
+	    builder.add_hasPrecursorScanNumber(hasPrecScanNumber);
+	    builder.add_psmCrossTypeAsString(cTypeString);
+	    builder.add_fullFilePath(filepath);
+	    builder.add_digestionParamsString(dpString);
+	    builder.add_lPositions(lpPositionVec);
+	    builder.add_xlRanks(xlRanksVec);
+	    builder.add_fdrInfo(sFdr);
+	    builder.add_peptide(sPep);
+	    builder.add_ions(sMaFVec);
+
+            return builder.Finish();
         }
         
-        // done
         void CrosslinkSpectralMatch::Unpack (char *buf, size_t buf_len, int count, size_t &len,
                                              std::vector<CrosslinkSpectralMatch*> &pepVec,
                                              const std::vector<Modification*> &mods,
                                              const std::vector<Protein *> &proteinList )
         {
             auto sCsmVecObject = GetSerializedCrosslinkSpectralMatchVec((uint8_t*)buf)->csms();
-	    //std::vector<SerializedCrosslinkSpectralMatch> sCsmObjectVec = {sCsmVecObject->begin(), sCsmVecObject->end()};
 
             int csmCount = sCsmVecObject->size();
-            int index = 0;
+            std::cout << "CSM object vec size (peps+betas, should be 4):" << csmCount << std::endl;
+	    int index = 0;
 
             // loop through CSM vector
             while (index < csmCount) {
@@ -647,14 +688,13 @@ namespace EngineLayer
 
                     // unpack betapep, set as CSM's beta peptide
                     CrosslinkSpectralMatch *beta_pep;
-                    CrosslinkSpectralMatch::Unpack_internal(sCsmVecObject->Get(index), &pep, mods, proteinList, has_beta_peptide);
+                    CrosslinkSpectralMatch::Unpack_internal(sCsmVecObject->Get(index), &beta_pep, mods, proteinList, has_beta_peptide);
                     pep->setBetaPeptide(beta_pep);
                     index++;
                 }
             }
         }
 
-        // done
         void CrosslinkSpectralMatch::Unpack (char *buf, size_t buf_len, size_t &len,
                                              CrosslinkSpectralMatch** newCsm,
                                              const std::vector<Modification*> &mods,
@@ -668,7 +708,6 @@ namespace EngineLayer
             }
         }
 
-        // done... just need to write accompanying unpacks
         void CrosslinkSpectralMatch::Unpack_internal (const SerializedCrosslinkSpectralMatch* sCsm,
                                                       CrosslinkSpectralMatch** newCsm,
                                                       const std::vector<Modification*> &mods,
