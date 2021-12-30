@@ -62,7 +62,7 @@ namespace EngineLayer
             static int Pack(char* buf, size_t &buf_size, FdrInfo *fdr);
 
             // used internally within CrosslinkSpectralMatch packing
-            static flatbuffers::Offset<SerializedFdrInfo> Pack(FdrInfo *fdr);
+            static flatbuffers::Offset<SerializedFdrInfo> Pack(flatbuffers::FlatBufferBuilder &fbb, FdrInfo *fdr);
 
             /// <summary>
             /// Functionality used to reconstruct an FdrInfo based on a
