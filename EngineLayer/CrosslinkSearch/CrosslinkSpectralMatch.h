@@ -108,7 +108,7 @@ namespace EngineLayer
             static int Pack ( char *buf, size_t &buf_size, CrosslinkSpectralMatch *csm);
             static int Pack ( char *buf, size_t &buf_size, const std::vector<CrosslinkSpectralMatch *> &csmVec);
 
-            static flatbuffers::Offset<SerializedCrosslinkSpectralMatch> Pack_internal(CrosslinkSpectralMatch *csm);
+            static flatbuffers::Offset<SerializedCrosslinkSpectralMatch> Pack_internal(flatbuffers::FlatBufferBuilder &builder, CrosslinkSpectralMatch *csm);
 
             
             
