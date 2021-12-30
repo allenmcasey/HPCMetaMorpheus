@@ -109,33 +109,33 @@ namespace EngineLayer
             }
 
 	    // for use in CSM packing
-	    flatbuffers::Offset<SerializedFdrInfo> FdrInfo::Pack(FdrInfo *fdr)
+	    flatbuffers::Offset<SerializedFdrInfo> FdrInfo::Pack(flatbuffers::FlatBufferBuilder &fbb, FdrInfo *fdr)
 	    {
-		flatbuffers::FlatBufferBuilder builder;
+		SerializedFdrInfoBuilder builder(fbb);
                 bool hasFdr = (fdr != nullptr);
 
                 // build serialized fdr if it exists
                 if (hasFdr) {
-                    double cumulativeTarget = fdr->getCumulativeTarget();
-                    double cumulativeDecoy = fdr->getCumulativeDecoy();
-                    double qValue = fdr->getQValue();
-                    double cumulativeTargetNotch = fdr->getCumulativeTargetNotch();
-                    double cumulativeDecoyNotch = fdr->getCumulativeDecoyNotch();
-                    double qValueNotch = fdr->getQValueNotch();;
-                    double maximumLikelihood = fdr->getMaximumLikelihood();
-                    double eValue = fdr->getEValue();
-                    double eScore = fdr->getEScore();
-                    bool calculateEValue = fdr->getCalculateEValue();
+                    builder.add_cumulativeTarget(fdr->getCumulativeTarget());
+                    builder.add_cumulativeDecoy(fdr->getCumulativeDecoy());
+                    builder.add_qValue(fdr->getQValue());
+                    builder.add_cumulativeTargetNotch(fdr->getCumulativeTargetNotch());
+                    builder.add_cumulativeDecoyNotch(fdr->getCumulativeDecoyNotch());
+                    builder.add_qValueNotch(fdr->getQValueNotch());
+                    builder.add_maximumLikelihood(fdr->getMaximumLikelihood());
+                    builder.add_eValue(fdr->getEValue());
+                    builder.add_eScore(fdr->getEScore());
+                    builder.add_calculateEValue(fdr->getCalculateEValue());
 
-                    auto fdrInfo = CreateSerializedFdrInfo(builder, cumulativeTarget, cumulativeDecoy, qValue,
-                                                        cumulativeTargetNotch, cumulativeDecoyNotch,
-                                                        qValueNotch, maximumLikelihood, eValue, eScore,
-                                                        calculateEValue, hasFdr);
-                    return fdrInfo;
+//                    auto fdrInfo = CreateSerializedFdrInfo(builder, cumulativeTarget, cumulativeDecoy, qValue,
+//                                                        cumulativeTargetNotch, cumulativeDecoyNotch,
+//                                                        qValueNotch, maximumLikelihood, eValue, eScore,
+//                                                        calculateEValue, hasFdr);
+                    return builder.Finish();
                 }
                 else {
-                    auto fdrInfo = CreateSerializedFdrInfo(builder, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, hasFdr);
-                    return fdrInfo;
+                    //auto fdrInfo = CreateSerializedFdrInfo(builder, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, hasFdr);
+                    return builder.Finish();
                 }
 	    }
             
