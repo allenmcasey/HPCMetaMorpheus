@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../PeptideSpectralMatch.h"
 #include "PsmCrossType.h"
