@@ -530,12 +530,13 @@ namespace EngineLayer
             std::stringstream sstream;
             msgpack::pack(sstream, serializedCSMVec);
             std::string tmp = sstream.str();            
-            int bufSize = sizeof(tmp);
+            int bufSize = tmp.size();
+	    buf_len = bufSize;
 
 	    std::cout << "Size of buffer: " << bufSize << std::endl;
 
 	    memcpy(buf, tmp.c_str(), bufSize);
-	    std::cout << buf << std::endl;
+
             return bufSize;
         }
 
@@ -637,8 +638,8 @@ namespace EngineLayer
 		std::cout << "not serializaing fdr because it doesn't exist..." << std::endl;
 
                 sFdr = {
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, false,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    0.0, false, false,
                 };
             }		
 
@@ -742,16 +743,20 @@ namespace EngineLayer
                                              const std::vector<Protein *> &proteinList)
         {
             std::stringstream sstream;
-            sstream << buf;
-	    std::cout << "sstream size before unpacking: " << sstream.str().size() << std::endl;
+            sstream.write(buf, buf_len);
+	    std::cout << "sstream size before unpacking (1): " << sstream.str().size() << std::endl;
 
             msgpack::object_handle objHandle = msgpack::unpack(sstream.str().data(), sstream.str().size());
             msgpack::object const& obj = objHandle.get();
             auto serializedCSMVec = obj.as< std::vector<SerializedCrosslinkSpectralMatch> >();
 
+	    std::cout << "Size of vector after unpacking: " << serializedCSMVec.size() << std::endl;
+
             int index = 0;
             while (index < serializedCSMVec.size())
             {
+		std::cout << "unpacking pep: " << index << std::endl;		
+
                 CrosslinkSpectralMatch *pep;
                 bool has_beta_peptide = false;
 
@@ -759,6 +764,7 @@ namespace EngineLayer
                 pepVec.push_back(pep);
 
                 if ( has_beta_peptide ) {
+		    std::cout << "unpacking pep: " << index << std::endl;
                     CrosslinkSpectralMatch *beta_pep;
 		    has_beta_peptide = false;
                     CrosslinkSpectralMatch::Unpack_internal(serializedCSMVec[index++], &beta_pep, mods, proteinList, has_beta_peptide);
@@ -808,11 +814,15 @@ namespace EngineLayer
             runnerUpScore = sCSM.runnerUpScore;
             peptideMonisotopicMass = sCSM.peptideMonoisotopicMass;
 
+	    std::cout << "got doubles" << std::endl;
+
             scannumber = sCSM.scanNumber;
             proteinPos = sCSM.xlProteinPos;
             matchedFragmentIonsVecsize = sCSM.matchedFragmentIonsSize;
             lpositionsize = sCSM.lPositionsSize;
             xlranksize = sCSM.xlRanksSize;
+
+	    std::cout << "got ints" << std::endl;
 
             has_beta_peptide = sCSM.hasBetaPeptide;
 
@@ -833,25 +843,32 @@ namespace EngineLayer
             double scanPrecursorMonoisotopicPeakMz = sCSM.scanPrecursorMonoisotopicPeakMz;
             double scanPrecursorMass = sCSM.scanPrecursorMass;
 
+	    std::cout << "got doubles and ints 2" << std::endl;
+
             std::string scanFullFilePath = sCSM.fullFilePath;
             
             //line 2: FdrInfo related data
             FdrInfo* fdr = nullptr;
-            FdrInfo* tempFdr = new FdrInfo();
-		
+            FdrInfo* tempFdr = new FdrInfo();		
 	    SerializedFdrInfo sFdrInfo = sCSM.fdrInfo;
-            tempFdr->setCumulativeTarget(sFdrInfo.cumulativeTarget);
-            tempFdr->setCumulativeDecoy(sFdrInfo.cumulativeDecoy);
-            tempFdr->setQValue(sFdrInfo.qValue);
-            tempFdr->setCumulativeTargetNotch(sFdrInfo.cumulativeTargetNotch);
-            tempFdr->setCumulativeDecoyNotch(sFdrInfo.cumulativeDecoyNotch);
-            tempFdr->setQValueNotch(sFdrInfo.qValueNotch);
-            tempFdr->setMaximumLikelihood(sFdrInfo.maximumLikelihood);
-            tempFdr->setEScore(sFdrInfo.eScore);
-            tempFdr->setEValue(sFdrInfo.eValue);
-            tempFdr->setCalculateEValue(sFdrInfo.calculateEValue);
+
+	    if (sFdrInfo.has_fdr)
+	    {
+                tempFdr->setCumulativeTarget(sFdrInfo.cumulativeTarget);
+                tempFdr->setCumulativeDecoy(sFdrInfo.cumulativeDecoy);
+                tempFdr->setQValue(sFdrInfo.qValue);
+                tempFdr->setCumulativeTargetNotch(sFdrInfo.cumulativeTargetNotch);
+                tempFdr->setCumulativeDecoyNotch(sFdrInfo.cumulativeDecoyNotch);
+                tempFdr->setQValueNotch(sFdrInfo.qValueNotch);
+                tempFdr->setMaximumLikelihood(sFdrInfo.maximumLikelihood);
+                tempFdr->setEScore(sFdrInfo.eScore);
+                tempFdr->setEValue(sFdrInfo.eValue);
+                tempFdr->setCalculateEValue(sFdrInfo.calculateEValue);
+	    }
 
             fdr = tempFdr;
+	
+	    std::cout << "got fdr" << std::endl;
 
             //line 3: linkPositions          
             std::vector<int> linkPosvec = sCSM.lPositions;
@@ -859,14 +876,11 @@ namespace EngineLayer
             //line 4: xlRank
             std::vector<int> xlRankVec = sCSM.xlRanks;
             
+	    std::cout << "got vecs" << std::endl;
+
             //line 5: DigestionParams
             std::string dpstring = sCSM.digestionParamsString;
             DigestionParams *dp = DigestionParams::FromString(dpstring);
-
-            /*******************************************************
-             * Everything up to this point is good to go it seems...
-             * proceed to checking out the PepWithSetMods & MFI
-            */
 		
 	    SerializedPeptide sPep = sCSM.peptide;
 
@@ -874,7 +888,7 @@ namespace EngineLayer
             CleavageSpecificity cvs = CleavageSpecificityExtension::ParseString(sPep.GetCleavageSpecificityAsString);
 
             std::unordered_map<std::string, Modification*> umsM;
-            auto pep = new PeptideWithSetModifications(sPep.GetFullSequence, 
+            PeptideWithSetModifications* pep = new PeptideWithSetModifications(sPep.GetFullSequence, 
                                                           umsM,                
                                                           sPep.NumFixedMods,
                                                           dp,                  
@@ -885,7 +899,9 @@ namespace EngineLayer
                                                           cvs,
                                                           sPep.GetPeptideDescription);
             pep->SetNonSerializedPeptideInfo(mods, proteinList);	
-	
+
+	    std::cout << "got pep" << std::endl;	
+
             // protein accession?
 
 #ifdef DEBUG
@@ -929,6 +945,8 @@ namespace EngineLayer
                 matchedFragmentIonsVec.push_back(newMaF);
             }
 
+	    std::cout << "got MaFs" << std::endl;
+
             
             // We are trearint scannumber and scanindex as the same here. First, it is actually really the same
             // in many scenarios. Second, scanindex is not really used for the subsequent operations as far
@@ -941,7 +959,9 @@ namespace EngineLayer
                                                                         scanPrecursorMonoisotopicPeakMz,
                                                                         scanPrecursorMass, dp,
                                                                         matchedFragmentIonsVec);
-            csm->setXLTotalScore(XLTotalScore);
+            
+	    std::cout << "made csm" << std::endl;
+	    csm->setXLTotalScore(XLTotalScore);
             csm->setDeltaScore(deltaScore);
             csm->setXlProteinPos(proteinPos);
             csm->setScore(score);
@@ -949,18 +969,30 @@ namespace EngineLayer
             csm->setCrossType (ctype);
             csm->setXlRank(xlRankVec);
             csm->setLinkPositions(linkPosvec);
-            if (fdr != nullptr) 
+            
+	    std::cout << "set initial values" << std::endl;
+
+            if (sFdrInfo.has_fdr) 
             {
                 csm->setFdrInfo(fdr);
             }
-            csm->ResolveAllAmbiguities();
+
+	    std::cout << "set fdr" << std::endl;	
+
+//            csm->ResolveAllAmbiguities();
+
+	    std::cout << "resolved ambiguities" << std::endl;
 
             // This is a hack. Need to find a proper solution.
             // In some situations involving Mods, the PeptideMonoisotopicMass
             // is not correct after deserialization.
             csm->setPeptideMonisotopicMass(peptideMonisotopicMass);
 
+	    std::cout << "set PMM" << std::endl;
+
             *newCSM = csm;
+
+	    std::cout << "done unpacking this pep" << std::endl;
 
             return ;
         }
