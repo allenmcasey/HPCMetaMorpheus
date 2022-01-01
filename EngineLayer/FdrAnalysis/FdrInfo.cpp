@@ -1,4 +1,4 @@
-﻿#include "FdrInfo.h"
+#include "FdrInfo.h"
 
 #include <string.h>
 #include <sstream>
